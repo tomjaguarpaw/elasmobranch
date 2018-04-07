@@ -154,6 +154,7 @@ sendStatus tmap myThreadId message =
   Data.IORef.modifyIORef tmap
                          (Data.Map.insert (show myThreadId) message)
 
+readStatus tmap threadId = fmap (Data.Map.lookup threadId) (Data.IORef.readIORef tmap)
 
 doRepoString mmap sendStatustmap path = do
   threadId <- Control.Concurrent.forkIO $ do
@@ -183,8 +184,8 @@ doRepoString mmap sendStatustmap path = do
           ++ "'>" ++ show threadId ++ "</a>"
           ++ "</p></body></html>")
 
-doThread tmap threadId = do
-  mhtml <- fmap (Data.Map.lookup threadId) (Data.IORef.readIORef tmap)
+doThread readStatus_ threadId = do
+  mhtml <- readStatus_
   case mhtml of
     Nothing -> return ("<html>"
                        ++ "<head><title>Invalid report ID</title></head>"
@@ -209,8 +210,9 @@ main = do
   tmap <- Data.IORef.newIORef Data.Map.empty
 
   let sendStatus_ = sendStatus tmap
+      readStatus_ = readStatus tmap
 
-  Server.mainOn (doRepoString mmap sendStatus_) (doThread tmap)
+  Server.mainOn (doRepoString mmap sendStatus_) (doThread readStatus_)
 
 -- This is not at all thread safe
 memoize :: Ord t
