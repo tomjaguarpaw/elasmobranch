@@ -3,7 +3,6 @@
 {-# LANGUAGE ExistentialQuantification #-}
 
 import qualified Data.Ord
-
 import           Control.Monad.Trans.Resource (runResourceT)
 import           Control.Applicative (empty)
 import           Data.Maybe (fromJust)
@@ -16,11 +15,8 @@ import qualified System.Directory
 import qualified System.Exit
 import qualified Streaming as S
 import qualified Streaming.Prelude as S
+import qualified Git
  
-tempDirectory = System.IO.Temp.withSystemTempDirectory ""
-
-proc x y = System.Process.readProcessWithExitCode x y ""
-
 data Table a b = forall e. (Show e, Ord e)
                => Table (e -> a) (e -> a) [e] (Data.Map.Map (e, e) b)
 
@@ -52,117 +48,25 @@ tableToHtml (Table fleft ftop es m) = do
                             ++ c ++ ";'>" ++ s ++ "</td>")
         table s = S.yield "<table>" >> s >> S.yield "</table>"
 
--- FIXME test for failure
-withClone repo f = do
-  tempDirectory $ \temp -> do
-    (_, _, _) <- proc "git" [ "clone"
---                          , "--depth=1"
---                          , "--no-single-branch"
---                          , "https://github.com/tomjaguarpaw/product-profunctors.git"
-                            , repo
-                            , temp
-                            ]
-    f (Repo temp)
+-- "https://github.com/tomjaguarpaw/product-profunctors.git"
 
-remoteBranches :: Repo -> IO [String]
-remoteBranches (Repo repo) =
-  System.Directory.withCurrentDirectory repo $ do
-    (_, out, _) <- proc "git" ["branch", "--remote"]
-    return (originBranches out)
-
-originBranches :: String -> [String]
-originBranches out = tail (flip fmap (lines out) $ \originBranch -> drop 2 originBranch)
-
-data Hash = Hash String deriving Show
-data Repo = Repo String deriving Show
-
--- FIXME: Check for error
-revParse :: String -> IO Hash
-revParse branch = do
-  (_, out, _) <- proc "git" ["rev-parse", branch]
-  return (Hash (take (length out - 1) out))
-
--- gitRebase x y
---
--- Rebase x onto y
-canRebaseOnto :: Repo -> Hash -> Hash -> IO RebaseStatus
-canRebaseOnto (Repo repo) (Hash hash) (Hash onto) =
-  System.Directory.withCurrentDirectory repo $ do
-  (exit, out, err) <- proc "git" ["rebase", hash, onto]
-  status <- case exit of
-    System.Exit.ExitSuccess     -> return Clean
-    System.Exit.ExitFailure 128 -> do
-      proc "git" ["rebase", "--abort"]
-      return Conflicts
-    System.Exit.ExitFailure a   -> do
-      error ("Did not expect git rebase to return " ++ show a)
-
-  putStrLn out
-  putStrLn err
-
-  return status
-
-isAncestorOf :: Repo -> Hash -> Hash -> IO Bool
-isAncestorOf (Repo repo) (Hash potentialAncestor) (Hash potentialDescendant) =
-  System.Directory.withCurrentDirectory repo $ do
-  (exitStatus, _, _) <- proc "git" [ "merge-base"
-                                   , "--is-ancestor"
-                                   , potentialAncestor
-                                   , potentialDescendant
-                                   ]
-    
-  return $ case exitStatus of
-    System.Exit.ExitSuccess   -> True
-    System.Exit.ExitFailure 1 -> False
-    System.Exit.ExitFailure a ->
-      error ("Didn't expect git merge-base --is-ancestor "
-              ++ "to return " ++ show a)
-
-compareHash :: Repo -> Hash -> Hash -> IO (Maybe Ordering)
-compareHash repo hash1 hash2 = do
-  a <- hash1 `isAncestorOf_` hash2
-  b <- hash2 `isAncestorOf_` hash1
-
-  return $ case (a, b) of
-    (True, True)   -> Just Data.Ord.EQ
-    (True, False)  -> Just Data.Ord.GT
-    (False, True)  -> Just Data.Ord.LT
-    (False, False) -> Nothing
-  where isAncestorOf_ = isAncestorOf repo
-
-
-data RebaseStatus = Conflicts | Clean deriving Show
-
-status :: Repo -> Hash -> Hash -> IO (Either RebaseStatus Ordering)
-status repo hash1 hash2 = do
-  mord <- compareHash repo hash1 hash2
-
-  case mord of
-    Just ord -> return (Right ord)
-    Nothing  -> fmap Left (canRebaseOnto repo hash1 hash2)
-
-test :: Bool
-test = originBranches "  origin/HEAD -> origin/master\n  origin/master\n  origin/partial-type-signatures"
-       == ["origin/master", "origin/partial-type-signatures"]
-
-
-main = withClone "/home/tom/Haskell/haskell-opaleye" $ \repo -> do
-  putStrLn $ if test
+main = Git.withClone "/home/tom/Haskell/haskell-opaleye" $ \repo -> do
+  putStrLn $ if Git.test
     then "Tests passed"
     else "OH NO MY TESTS FAILED!!!"
 
-  branches <- fmap (take 6 . drop 1) (remoteBranches repo)
+  branches <- fmap (take 5 . drop 1) (Git.remoteBranches repo)
   print branches
 
   let branch_hashes = S.for (S.each branches) $ \branch -> do
-        hash <- S.lift (revParse branch)
+        hash <- S.lift (Git.revParse branch)
         S.yield (branch, hash)
 
   let branchpairs :: S.Stream (S.Of _) IO ()
       branchpairs =
         S.for branch_hashes $ \(branch1, hash1) -> do
           S.for branch_hashes $ \(branch2, hash2) -> do
-            exit <- S.lift (status repo hash1 hash2)
+            exit <- S.lift (Git.status repo hash1 hash2)
 
             S.yield ((branch1, branch2), exit)
 
@@ -173,8 +77,8 @@ main = withClone "/home/tom/Haskell/haskell-opaleye" $ \repo -> do
 
   let d = Data.Map.fromList l
 
-      tc (Left Conflicts)  = TableCell "#ff0000" "&nbsp;"
-      tc (Left Clean)  = TableCell "#ccff00" "&nbsp;"
+      tc (Left Git.Conflicts)  = TableCell "#ff0000" "&nbsp;"
+      tc (Left Git.Clean)  = TableCell "#ccff00" "&nbsp;"
       tc (Right _) = TableCell "#00ff00" "&nbsp;"
 
       table = Table (drop 7) (take 3 . drop 7) branches (fmap tc d)
