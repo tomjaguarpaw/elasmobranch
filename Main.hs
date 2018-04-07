@@ -147,11 +147,12 @@ mainOld = do
                  "file:///home/tom/Haskell/haskell-opaleye"
   runResourceT (S.writeFile "/tmp/foo.html" html)
 
-data Status = Cloning | CompletedRebasing Int Int
+data Status = Cloning
+            | CompletedRebasing Int Int
 
 sendStatus tmap myThreadId message =
   Data.IORef.modifyIORef tmap
-                         (Data.Map.insert (show myThreadId) (Left message))
+                         (Data.Map.insert (show myThreadId) message)
 
 
 doRepoString mmap sendStatustmap path = do
@@ -160,7 +161,7 @@ doRepoString mmap sendStatustmap path = do
 
     let status = sendStatustmap myThreadId
 
-    let statusTyped = status . \case
+    let statusTyped = status . Left . \case
           CompletedRebasing n total ->
             show n ++ "/" ++ show total ++ " rebases done"
           Cloning ->
@@ -171,7 +172,7 @@ doRepoString mmap sendStatustmap path = do
     l S.:> _ <- S.toList html
     let htmlString = concat l
 
-    Data.IORef.modifyIORef tmap (Data.Map.insert (show myThreadId) (Right htmlString))
+    status (Right htmlString)
 
   return ("<html><head><title>elasmobranch: Link to your report</title></head>"
           ++ "<body><p>The report for <code>"
@@ -206,7 +207,10 @@ main :: IO ()
 main = do
   mmap <- Data.IORef.newIORef Data.Map.empty
   tmap <- Data.IORef.newIORef Data.Map.empty
-  Server.mainOn (doRepoString mmap (sendStatus tmap)) (doThread tmap)
+
+  let sendStatus_ = sendStatus tmap
+
+  Server.mainOn (doRepoString mmap sendStatus_) (doThread tmap)
 
 -- This is not at all thread safe
 memoize :: Ord t
