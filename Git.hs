@@ -42,10 +42,13 @@ originBranches :: String -> [String]
 originBranches out = tail (flip fmap (lines out) $ \originBranch -> drop 2 originBranch)
 
 -- FIXME: Check for error
-revParse :: String -> IO Hash
-revParse branch = do
-  (_, out, _) <- proc "git" ["rev-parse", branch]
-  return (Hash (take (length out - 1) out))
+revParse :: Repo -> String -> IO Hash
+revParse (Repo repo) branch = do
+  System.Directory.withCurrentDirectory repo $ do
+  (exit, out, err) <- proc "git" ["rev-parse", branch]
+  case exit of
+    System.Exit.ExitSuccess   -> return (Hash (take (length out - 1) out))
+    System.Exit.ExitFailure _ -> error err
 
 status :: Repo -> Hash -> Hash -> IO (Either RebaseStatus Ordering)
 status repo hash1 hash2 = do
@@ -70,26 +73,23 @@ canRebaseOnto (Repo repo) (Hash hash) (Hash onto) =
     System.Exit.ExitFailure a   -> do
       error ("Did not expect git rebase to return " ++ show a)
 
-  putStrLn out
-  putStrLn err
-
   return status_
 
 isAncestorOf :: Repo -> Hash -> Hash -> IO Bool
 isAncestorOf (Repo repo) (Hash potentialAncestor) (Hash potentialDescendant) =
   System.Directory.withCurrentDirectory repo $ do
-  (exitStatus, _, _) <- proc "git" [ "merge-base"
-                                   , "--is-ancestor"
-                                   , potentialAncestor
-                                   , potentialDescendant
-                                   ]
+  (exitStatus, _, err) <- proc "git" [ "merge-base"
+                                     , "--is-ancestor"
+                                     , potentialAncestor
+                                     , potentialDescendant
+                                     ]
     
   return $ case exitStatus of
     System.Exit.ExitSuccess   -> True
     System.Exit.ExitFailure 1 -> False
     System.Exit.ExitFailure a ->
       error ("Didn't expect git merge-base --is-ancestor "
-              ++ "to return " ++ show a)
+              ++ "to return " ++ show a ++ "\n" ++ err)
 
 compareHash :: Repo -> Hash -> Hash -> IO (Maybe Ordering)
 compareHash repo hash1 hash2 = do
@@ -111,4 +111,3 @@ data RebaseStatus = Conflicts | Clean deriving Show
 test :: Bool
 test = originBranches "  origin/HEAD -> origin/master\n  origin/master\n  origin/partial-type-signatures"
        == ["origin/master", "origin/partial-type-signatures"]
-
