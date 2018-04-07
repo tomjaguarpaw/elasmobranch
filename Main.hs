@@ -58,30 +58,16 @@ doRepo mmap repoPath = Git.withClone repoPath $ \repo -> do
   bhm_ S.:> _ <- S.toList branch_hashes
   let bhm = S.each bhm_
 
-  let checkit hash1 hash2 = let f = Git.status repo hash1 hash2 in
-        case mmap of
-          Nothing -> f
-          Just map -> do
-              -- This is not at all thread safe
-                  map_ <- Data.IORef.readIORef map
-                  case Data.Map.lookup (hash1, hash2) map_ of
-                    Nothing -> do
-                      putStrLn "Storing in the map"
-                      exit <- f
-                      Data.IORef.writeIORef map
-                                            (Data.Map.insert (hash1, hash2)
-                                                             exit
-                                                             map_)
-                      return exit
-                    Just exit -> do
-                      putStrLn "It's already in the map!"
-                      return exit
+  let checkit = (case mmap of
+        Nothing   -> id
+        Just mmap -> memoize mmap)
+          (uncurry (Git.status repo))
 
   let branchpairs :: S.Stream (S.Of _) IO ()
       branchpairs =
         S.for bhm $ \(branch1, hash1) -> do
           S.for bhm $ \(branch2, hash2) -> do
-            exit <- S.lift $ checkit hash1 hash2
+            exit <- S.lift $ checkit (hash1, hash2)
             S.yield ((branch1, branch2), exit)
 
   let result = branchpairs
@@ -156,3 +142,15 @@ main :: IO ()
 main = do
   mmap <- Data.IORef.newIORef Data.Map.empty
   Server.mainOn (doRepoString (Just mmap))
+
+memoize memomap f x = do
+  map_ <- Data.IORef.readIORef memomap
+  case Data.Map.lookup x map_ of
+    Nothing -> do
+      putStrLn "Storing in the map"
+      exit <- f x
+      Data.IORef.writeIORef memomap (Data.Map.insert x exit map_)
+      return exit
+    Just exit -> do
+      putStrLn "It's already in the map!"
+      return exit
