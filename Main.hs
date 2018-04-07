@@ -108,7 +108,7 @@ main = tempDirectory $ \temp -> do
   putStrLn out
   putStrLn err
 
-  let branches = take 7 (originBranches out)
+  let branches = take 6 (drop 1 (originBranches out))
   print branches
 
   let branch_hashes = S.for (S.each branches) $ \branch -> do
@@ -121,7 +121,7 @@ main = tempDirectory $ \temp -> do
           S.for branch_hashes $ \(branch2, hash2) -> do
             exit <- S.lift (hash1 `status` hash2)
 
-            S.yield (branch1, branch2, exit)
+            S.yield (drop 7 branch1, drop 7 branch2, exit)
 
   let result = branchpairs
 
