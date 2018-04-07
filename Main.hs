@@ -45,16 +45,12 @@ tableToHtml (Table fleft ftop lefts tops m) = do
 
 -- "https://github.com/tomjaguarpaw/product-profunctors.git"
 
-doRepo :: Monad m
-  => Maybe _
-  -> String
-  -> IO (S.Stream (S.Of [Char]) m ())
-doRepo mmap repoPath = Git.withClone repoPath $ \result -> case result of
+doRepo mmap status repoPath = Git.withClone repoPath $ \result -> case result of
   Left  err  -> do
     return (S.yield ("Couldn't clone " ++ repoPath))
-  Right repo -> doRepoSuccess mmap repo
+  Right repo -> doRepoSuccess mmap status repo
 
-doRepoSuccess mmap repo = do
+doRepoSuccess mmap status repo = do
   branches <- Git.remoteBranches repo
 
   let branch_hashes = S.for (S.each branches) $ \branch -> do
@@ -69,16 +65,24 @@ doRepoSuccess mmap repo = do
         Just mmap -> memoize mmap)
           (uncurry (Git.status repo))
 
+  let totalRebasesToDo = length bhm_ * length bhm_
+  count <- Data.IORef.newIORef 0
+
   let branchpairs :: S.Stream (S.Of _) IO ()
       branchpairs =
         S.for bhm $ \(branch1, hash1) -> do
           S.for bhm $ \(branch2, hash2) -> do
-            exit <- S.lift $ checkit (hash1, hash2)
+            exit <- S.lift $ do
+              exit <- checkit (hash1, hash2)
+              Data.IORef.modifyIORef count (+1)
+              soFar <- Data.IORef.readIORef count
+              status (show soFar ++ "/" ++ show totalRebasesToDo
+                      ++ " rebases done")
+              return exit
             S.yield ((branch1, branch2), exit)
 
-  let result = branchpairs
-
-  l S.:> _ <- S.toList result
+  status "I am rebasing"
+  l S.:> _ <- S.toList branchpairs
 
   let d = Data.Map.fromList l
 
@@ -126,6 +130,7 @@ doRepoSuccess mmap repo = do
 
       html = do
         S.yield "<html>"
+        S.yield "<head><title>elasmobranch</title></head>"
         S.yield "<body>"
         list
         S.yield "<p>"
@@ -137,16 +142,22 @@ doRepoSuccess mmap repo = do
 
 mainOld :: IO ()
 mainOld = do
-  html <- doRepo Nothing "file:///home/tom/Haskell/haskell-opaleye"
+  html <- doRepo Nothing
+                 (const (return ()))
+                 "file:///home/tom/Haskell/haskell-opaleye"
   runResourceT (S.writeFile "/tmp/foo.html" html)
 
 doRepoString mmap tmap path = do
   threadId <- Control.Concurrent.forkIO $ do
     myThreadId <- Control.Concurrent.myThreadId
 
-    Data.IORef.modifyIORef tmap (Data.Map.insert (show myThreadId) (Left ()))
+    let status message =
+          Data.IORef.modifyIORef
+              tmap
+              (Data.Map.insert (show myThreadId) (Left message))
 
-    html <- doRepo (Just mmap) path
+    status "I am cloning the repo"
+    html <- doRepo (Just mmap) status path
     l S.:> _ <- S.toList html
     let htmlString = concat l
 
@@ -169,14 +180,15 @@ doThread tmap threadId = do
                        ++ "<body>"
                        ++ "<p>This doesn't appear to be a valid report ID</p>"
                        ++ "</body></html>")
-    Just (Left ()) -> return
+    Just (Left s) -> return
                        ("<html>"
                         ++ "<head><meta http-equiv='refresh' content='5' >"
-                        ++ "<title>Waiting for report to be generated</title></head>"
+                        ++ "<title>elasmobranch: Waiting for report to be generated</title></head>"
                         ++ "<body>"
                         ++ "<p>I haven't finished generating your report yet. "
                         ++ "I'll refresh every 5 seconds to check for it "
                         ++ "or you can do that manually.</p>"
+                        ++ "<p>elasmobranch says \"" ++ s ++ "\"</p>"
                         ++ "</body></html>")
     Just (Right html) -> return html
 

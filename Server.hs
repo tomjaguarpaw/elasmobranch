@@ -49,9 +49,9 @@ index = do
   HL.method HL.GET
 
   let html = ("<html>"
-              ++ "<head><title>Elasmobranch</title></head>"
+              ++ "<head><title>elasmobranch</title></head>"
               ++ "<body>"
-              ++ "<h1>Elasmobranch</h1>"
+              ++ "<h1>elasmobranch</h1>"
               ++ "<p>Submit the URL to a git repository "
               ++ "and I'll tell you about the branch status</p>"
               ++ "<form action='/repo' method='GET'>"
