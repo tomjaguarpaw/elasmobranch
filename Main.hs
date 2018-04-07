@@ -64,6 +64,12 @@ withClone repo f = do
                             ]
     f (Repo temp)
 
+remoteBranches :: Repo -> IO [String]
+remoteBranches (Repo repo) =
+  System.Directory.withCurrentDirectory repo $ do
+    (_, out, _) <- proc "git" ["branch", "--remote"]
+    return (originBranches out)
+
 originBranches :: String -> [String]
 originBranches out = tail (flip fmap (lines out) $ \originBranch -> drop 2 originBranch)
 
@@ -140,21 +146,12 @@ test = originBranches "  origin/HEAD -> origin/master\n  origin/master\n  origin
        == ["origin/master", "origin/partial-type-signatures"]
 
 
-main = withClone "/home/tom/Haskell/haskell-opaleye" $ \(Repo repo) -> do
+main = withClone "/home/tom/Haskell/haskell-opaleye" $ \repo -> do
   putStrLn $ if test
     then "Tests passed"
     else "OH NO MY TESTS FAILED!!!"
 
---  System.Directory.setCurrentDirectory temp
-
-
-  out <- System.Directory.withCurrentDirectory repo $ do
-    (_, out, err) <- proc "git" ["branch", "--remote"]
-    putStrLn out
-    putStrLn err
-    return out
-
-  let branches = take 6 (drop 1 (originBranches out))
+  branches <- fmap (take 6 . drop 1) (remoteBranches repo)
   print branches
 
   let branch_hashes = S.for (S.each branches) $ \branch -> do
@@ -165,7 +162,7 @@ main = withClone "/home/tom/Haskell/haskell-opaleye" $ \(Repo repo) -> do
       branchpairs =
         S.for branch_hashes $ \(branch1, hash1) -> do
           S.for branch_hashes $ \(branch2, hash2) -> do
-            exit <- S.lift (status (Repo repo) hash1 hash2)
+            exit <- S.lift (status repo hash1 hash2)
 
             S.yield ((branch1, branch2), exit)
 
