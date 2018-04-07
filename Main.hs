@@ -45,10 +45,6 @@ tableToHtml (Table fleft ftop lefts tops m) = do
 -- "https://github.com/tomjaguarpaw/product-profunctors.git"
 
 doRepo mmap repoPath = Git.withClone repoPath $ \repo -> do
-  putStrLn $ if Git.test
-    then "Tests passed"
-    else "OH NO MY TESTS FAILED!!!"
-
   branches <- Git.remoteBranches repo
 
   let branch_hashes = S.for (S.each branches) $ \branch -> do
