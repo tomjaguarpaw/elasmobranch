@@ -8,6 +8,7 @@ import qualified Data.Map
 import qualified Streaming as S
 import qualified Streaming.Prelude as S
 import qualified Git
+import qualified Server
  
 data Table a b = forall e f. (Show e, Show f, Ord e, Ord f)
                => Table (e -> a) (f -> a) [e] [f] (Data.Map.Map (e, f) b)
@@ -120,7 +121,15 @@ doRepo repoPath = Git.withClone repoPath $ \repo -> do
 
   return html
 
-main :: IO ()
-main = do
+mainOld :: IO ()
+mainOld = do
   html <- doRepo "file:///home/tom/Haskell/haskell-opaleye"
   runResourceT (S.writeFile "/tmp/foo.html" html)
+
+doRepoString path = do
+  html <- doRepo path
+  l S.:> _ <- S.toList html
+  return (concat l)
+
+main :: IO ()
+main = Server.mainOn doRepoString
