@@ -1,8 +1,13 @@
 {-# LANGUAGE NoMonomorphismRestriction #-}
 {-# LANGUAGE PartialTypeSignatures     #-}
+{-# LANGUAGE ExistentialQuantification #-}
 
 import qualified Data.Ord
 
+import           Control.Monad.Trans.Resource (runResourceT)
+import           Control.Applicative (empty)
+import           Data.Maybe (fromJust)
+import qualified Data.Map
 import qualified Data.List as L
 import qualified Data.Traversable as T
 import qualified System.IO.Temp
@@ -15,6 +20,33 @@ import qualified Streaming.Prelude as S
 tempDirectory = System.IO.Temp.withSystemTempDirectory ""
 
 proc x y = System.Process.readProcessWithExitCode x y ""
+
+data Table a b = forall e. (Show e, Ord e)
+               => Table (e -> a) [e] (Data.Map.Map (e, e) b)
+
+tableToHtml :: (Show a, Monad m)
+            => Table a String
+            -> S.Stream (S.Of String) m ()
+tableToHtml (Table f es m) = do
+  table $ do
+    row $ do
+      cell ""
+      S.for (S.each es) $ \top ->
+        cell (show (f top))
+
+    S.for (S.each es) $ \left -> do
+      row $ do
+        cell (show (f left))
+
+        S.for (S.each es) $ \top -> do
+          cell (case Data.Map.lookup (top, left) m of
+                  Just t  -> t
+                  Nothing -> error (show (top, left))
+               )
+
+  where row s = S.yield "<tr>" >> s >> S.yield "</tr>"
+        cell s = S.yield ("<td>" ++ s ++ "</td>")
+        table s = S.yield "<table>" >> s >> S.yield "</table>"
 
 originBranches :: String -> [String]
 originBranches out = tail (flip fmap (lines out) $ \originBranch -> drop 2 originBranch)
@@ -108,7 +140,7 @@ main = tempDirectory $ \temp -> do
   putStrLn out
   putStrLn err
 
-  let branches = take 6 (drop 1 (originBranches out))
+  let branches = take 4 (drop 1 (originBranches out))
   print branches
 
   let branch_hashes = S.for (S.each branches) $ \branch -> do
@@ -121,17 +153,26 @@ main = tempDirectory $ \temp -> do
           S.for branch_hashes $ \(branch2, hash2) -> do
             exit <- S.lift (hash1 `status` hash2)
 
-            S.yield (drop 7 branch1, drop 7 branch2, exit)
+            S.yield ((branch1, branch2), exit)
 
   let result = branchpairs
 
   l S.:> _ <- S.toList result
   mapM_ print l
 
---  things <- (branches >>=) $ \branch1 -> do
---    (branches >>=) $ \branch2 -> do
---      print (branch1, branch2)
+  let d = Data.Map.fromList l
 
---  print things
+      table = Table id branches (fmap show d)
+
+      html = do
+        S.yield "<html>"
+        S.yield "<p>"
+        tableToHtml table
+        S.yield "</p>"
+        S.yield "</html>"
+
+  print d
+  runResourceT (S.writeFile "/tmp/foo.html" html)
+
 
   return ()
