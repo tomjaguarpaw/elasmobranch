@@ -3,15 +3,17 @@ module Git where
 import qualified Data.Ord
 import qualified System.IO.Temp
 import qualified System.Process
-import qualified System.Directory
 import qualified System.Exit
 
 -- Utils
 
 proc :: FilePath
      -> [String]
+     -> Maybe FilePath
      -> IO (System.Exit.ExitCode, String, String)
-proc x y = System.Process.readProcessWithExitCode x y ""
+proc x y dir = System.Process.readCreateProcessWithExitCode createProcess stdin
+  where createProcess = (System.Process.proc x y) { System.Process.cwd = dir }
+        stdin = ""
 
 -- Git
 
@@ -32,13 +34,13 @@ withClone repo f = do
                             , repo
                             , temp
                             ]
+                            Nothing
     f (Repo temp)
 
 remoteBranches :: Repo -> IO [String]
-remoteBranches (Repo repo) =
-  System.Directory.withCurrentDirectory repo $ do
-    (_, out, _) <- proc "git" ["branch", "--remote"]
-    return (originBranches out)
+remoteBranches (Repo repo) = do
+  (_, out, _) <- proc "git" ["branch", "--remote"] (Just repo)
+  return (originBranches out)
 
 originBranches :: String -> [String]
 originBranches out = tail (flip fmap (lines out) $ \originBranch -> drop 2 originBranch)
@@ -46,8 +48,7 @@ originBranches out = tail (flip fmap (lines out) $ \originBranch -> drop 2 origi
 -- FIXME: Check for error
 revParse :: Repo -> String -> IO Hash
 revParse (Repo repo) branch = do
-  System.Directory.withCurrentDirectory repo $ do
-  (exit, out, err) <- proc "git" ["rev-parse", branch]
+  (exit, out, err) <- proc "git" ["rev-parse", branch] (Just repo)
   case exit of
     System.Exit.ExitSuccess   -> return (Hash (take (length out - 1) out))
     System.Exit.ExitFailure _ -> error err
@@ -64,13 +65,12 @@ status repo hash1 hash2 = do
 --
 -- Rebase x onto y
 canRebaseOnto :: Repo -> Hash -> Hash -> IO RebaseStatus
-canRebaseOnto (Repo repo) (Hash hash) (Hash onto) =
-  System.Directory.withCurrentDirectory repo $ do
-  (exit, out, err) <- proc "git" ["rebase", onto, hash]
+canRebaseOnto (Repo repo) (Hash hash) (Hash onto) = do
+  (exit, _, _) <- proc "git" ["rebase", onto, hash] (Just repo)
   status_ <- case exit of
     System.Exit.ExitSuccess     -> return Clean
     System.Exit.ExitFailure 128 -> do
-      _ <- proc "git" ["rebase", "--abort"]
+      _ <- proc "git" ["rebase", "--abort"] (Just repo)
       return Conflicts
     System.Exit.ExitFailure a   -> do
       error ("Did not expect git rebase to return " ++ show a)
@@ -78,13 +78,13 @@ canRebaseOnto (Repo repo) (Hash hash) (Hash onto) =
   return status_
 
 isAncestorOf :: Repo -> Hash -> Hash -> IO Bool
-isAncestorOf (Repo repo) (Hash potentialAncestor) (Hash potentialDescendant) =
-  System.Directory.withCurrentDirectory repo $ do
+isAncestorOf (Repo repo) (Hash potentialAncestor) (Hash potentialDescendant) = do
   (exitStatus, _, err) <- proc "git" [ "merge-base"
                                      , "--is-ancestor"
                                      , potentialAncestor
                                      , potentialDescendant
                                      ]
+                                     (Just repo)
     
   return $ case exitStatus of
     System.Exit.ExitSuccess   -> True
