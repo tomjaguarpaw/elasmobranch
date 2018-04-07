@@ -2,6 +2,7 @@
 {-# LANGUAGE PartialTypeSignatures     #-}
 {-# LANGUAGE ExistentialQuantification #-}
 
+import qualified Data.Ord
 import           Control.Monad.Trans.Resource (runResourceT)
 import qualified Data.Map
 import qualified Streaming as S
@@ -72,9 +73,17 @@ main = Git.withClone "/home/tom/Haskell/haskell-opaleye" $ \repo -> do
 
   let d = Data.Map.fromList l
 
-      tc (Left Git.Conflicts)  = TableCell "#ff0000" "&nbsp;"
-      tc (Left Git.Clean)  = TableCell "#ccff00" "&nbsp;"
-      tc (Right _) = TableCell "#00ff00" "&nbsp;"
+      red    = "#ff0000"
+      yellow = "#ccff00"
+      green  = "#00ff00"
+      grey   = "#cccccc"
+      white  = "#ffffff"
+
+      tc (Left Git.Conflicts) = TableCell red "&nbsp;"
+      tc (Left Git.Clean)     = TableCell yellow "&nbsp;"
+      tc (Right Data.Ord.GT)  = TableCell grey "&nbsp;"
+      tc (Right Data.Ord.LT)  = TableCell green "&nbsp;"
+      tc (Right Data.Ord.EQ)  = TableCell white "&nbsp;"
 
       table = Table (drop 7)
                     (take 3 . drop 7)
