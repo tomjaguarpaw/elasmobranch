@@ -114,11 +114,12 @@ main = Git.withClone "/home/tom/Haskell/haskell-opaleye" $ \repo -> do
 
       html = do
         S.yield "<html>"
+        S.yield "<body>"
         list
         S.yield "<p>"
         tableToHtml table
         S.yield "</p>"
-        S.yield "</html>"
+        S.yield "</body></html>"
 
   print d
   runResourceT (S.writeFile "/tmp/foo.html" html)
