@@ -1,6 +1,7 @@
 {-# LANGUAGE NoMonomorphismRestriction #-}
 {-# LANGUAGE PartialTypeSignatures     #-}
 {-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE LambdaCase                #-}
 
 import qualified Control.Concurrent
 import qualified Data.IORef
@@ -45,12 +46,12 @@ tableToHtml (Table fleft ftop lefts tops m) = do
 
 -- "https://github.com/tomjaguarpaw/product-profunctors.git"
 
-doRepo mmap status repoPath = Git.withClone repoPath $ \result -> case result of
+doRepo mmap statusTyped repoPath = Git.withClone repoPath $ \result -> case result of
   Left  err  -> do
     return (S.yield ("Couldn't clone " ++ repoPath))
-  Right repo -> doRepoSuccess mmap status repo
+  Right repo -> doRepoSuccess mmap statusTyped repo
 
-doRepoSuccess mmap status repo = do
+doRepoSuccess mmap statusTyped repo = do
   branches <- Git.remoteBranches repo
 
   let branch_hashes = S.for (S.each branches) $ \branch -> do
@@ -76,12 +77,11 @@ doRepoSuccess mmap status repo = do
               exit <- checkit (hash1, hash2)
               Data.IORef.modifyIORef count (+1)
               soFar <- Data.IORef.readIORef count
-              status (show soFar ++ "/" ++ show totalRebasesToDo
-                      ++ " rebases done")
+              statusTyped (CompletedRebasing soFar totalRebasesToDo)
               return exit
             S.yield ((branch1, branch2), exit)
 
-  status "I am rebasing"
+  statusTyped (CompletedRebasing 0 totalRebasesToDo)
   l S.:> _ <- S.toList branchpairs
 
   let d = Data.Map.fromList l
@@ -147,6 +147,8 @@ mainOld = do
                  "file:///home/tom/Haskell/haskell-opaleye"
   runResourceT (S.writeFile "/tmp/foo.html" html)
 
+data Status = Cloning | CompletedRebasing Int Int
+
 doRepoString mmap tmap path = do
   threadId <- Control.Concurrent.forkIO $ do
     myThreadId <- Control.Concurrent.myThreadId
@@ -156,8 +158,14 @@ doRepoString mmap tmap path = do
               tmap
               (Data.Map.insert (show myThreadId) (Left message))
 
-    status "I am cloning the repo"
-    html <- doRepo (Just mmap) status path
+    let statusTyped = status . \case
+          CompletedRebasing n total ->
+            show n ++ "/" ++ show total ++ " rebases done"
+          Cloning ->
+            "I am cloning the repo"
+
+    statusTyped Cloning
+    html <- doRepo (Just mmap) statusTyped path
     l S.:> _ <- S.toList html
     let htmlString = concat l
 
