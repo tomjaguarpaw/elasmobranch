@@ -22,30 +22,34 @@ tempDirectory = System.IO.Temp.withSystemTempDirectory ""
 proc x y = System.Process.readProcessWithExitCode x y ""
 
 data Table a b = forall e. (Show e, Ord e)
-               => Table (e -> a) [e] (Data.Map.Map (e, e) b)
+               => Table (e -> a) (e -> a) [e] (Data.Map.Map (e, e) b)
 
-tableToHtml :: (Show a, Monad m)
-            => Table a String
+data TableCell = TableCell { tcColor  :: String
+                           , tcString :: String
+                           }
+
+tableToHtml :: Monad m
+            => Table String TableCell
             -> S.Stream (S.Of String) m ()
-tableToHtml (Table f es m) = do
+tableToHtml (Table fleft ftop es m) = do
   table $ do
     row $ do
-      cell ""
+      cell "white" ""
       S.for (S.each es) $ \top ->
-        cell (show (f top))
+        cell "white" (ftop top)
 
     S.for (S.each es) $ \left -> do
       row $ do
-        cell (show (f left))
+        cell "white" (fleft left)
 
         S.for (S.each es) $ \top -> do
-          cell (case Data.Map.lookup (top, left) m of
-                  Just t  -> t
+          case Data.Map.lookup (top, left) m of
+                  Just (TableCell c t)  -> cell c t
                   Nothing -> error (show (top, left))
-               )
 
   where row s = S.yield "<tr>" >> s >> S.yield "</tr>"
-        cell s = S.yield ("<td>" ++ s ++ "</td>")
+        cell c s = S.yield ("<td style='background-color: "
+                            ++ c ++ ";'>" ++ s ++ "</td>")
         table s = S.yield "<table>" >> s >> S.yield "</table>"
 
 originBranches :: String -> [String]
@@ -162,7 +166,11 @@ main = tempDirectory $ \temp -> do
 
   let d = Data.Map.fromList l
 
-      table = Table id branches (fmap show d)
+      tc (Left Conflicts)  = TableCell "#ff0000" "&nbsp;"
+      tc (Left Clean)  = TableCell "#ccff00" "&nbsp;"
+      tc (Right _) = TableCell "#00ff00" "&nbsp;"
+
+      table = Table (drop 7) (take 3 . drop 7) branches (fmap tc d)
 
       html = do
         S.yield "<html>"
