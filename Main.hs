@@ -42,18 +42,15 @@ tableToHtml (Table fleft ftop lefts tops m) = do
 
 -- "https://github.com/tomjaguarpaw/product-profunctors.git"
 
-main :: IO ()
-main = Git.withClone "file:///home/tom/Haskell/haskell-opaleye" $ \repo -> do
+doRepo repoPath = Git.withClone repoPath $ \repo -> do
   putStrLn $ if Git.test
     then "Tests passed"
     else "OH NO MY TESTS FAILED!!!"
 
   branches <- fmap (take 8 . drop 1) (Git.remoteBranches repo)
-  print branches
 
   let branch_hashes = S.for (S.each branches) $ \branch -> do
         hash <- S.lift (Git.revParse repo branch)
-        S.lift (print (branch, hash))
         S.yield (branch, hash)
 
   bhm_ S.:> _ <- S.toList branch_hashes
@@ -121,8 +118,9 @@ main = Git.withClone "file:///home/tom/Haskell/haskell-opaleye" $ \repo -> do
         S.yield "</p>"
         S.yield "</body></html>"
 
-  print d
+  return html
+
+main :: IO ()
+main = do
+  html <- doRepo "file:///home/tom/Haskell/haskell-opaleye"
   runResourceT (S.writeFile "/tmp/foo.html" html)
-
-
-  return ()
