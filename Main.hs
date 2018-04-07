@@ -41,7 +41,8 @@ tableToHtml (Table fleft ftop lefts tops m) = do
 
   where row s = S.yield "<tr>" >> s >> S.yield "</tr>"
         cell tc = S.yield ("<td style='background-color: "
-                            ++ tcColor tc ++ ";'>" ++ tcString tc ++ "</td>")
+                            ++ tcColor tc ++ "; text-align: right'>"
+                            ++ tcString tc ++ "</td>")
         table s = S.yield "<table>" >> s >> S.yield "</table>"
 
 -- "https://github.com/tomjaguarpaw/product-profunctors.git"
@@ -178,14 +179,15 @@ doRepoString mmap sendStatustmap path = do
     status (Right htmlString)
 
   return ("<html><head><title>elasmobranch: Link to your report</title></head>"
-          ++ "<body><p>The report for <code>"
+          ++ "<body>"
+          ++ submitAnother
+          ++ "<p>The report for <code>"
           ++ path
           ++ "</code>"
           ++ " will appear at <a href='/thread?thread="
           ++ show threadId
           ++ "'>" ++ show threadId ++ "</a>"
           ++ "</p>"
-          ++ submitAnother
           ++ "</body></html>")
 
 submitAnother = "<p><a href='/'>&#x25c0; Submit another repo</a></p>"
@@ -196,19 +198,19 @@ doThread readStatus_ threadId = do
     Nothing -> return ("<html>"
                        ++ "<head><title>Invalid report ID</title></head>"
                        ++ "<body>"
-                       ++ "<p>This doesn't appear to be a valid report ID</p>"
                        ++ submitAnother
+                       ++ "<p>This doesn't appear to be a valid report ID</p>"
                        ++ "</body></html>")
     Just (Left s) -> return
                        ("<html>"
                         ++ "<head><meta http-equiv='refresh' content='5' >"
                         ++ "<title>elasmobranch: Waiting for report to be generated</title></head>"
                         ++ "<body>"
+                        ++ submitAnother
                         ++ "<p>I haven't finished generating your report yet. "
                         ++ "I'll refresh every 5 seconds to check for it "
                         ++ "or you can do that manually.</p>"
                         ++ "<p>elasmobranch says \"" ++ s ++ "\"</p>"
-                        ++ submitAnother
                         ++ "</body></html>")
     Just (Right html) -> return html
 
