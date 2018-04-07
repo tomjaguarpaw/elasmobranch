@@ -91,8 +91,30 @@ main = Git.withClone "/home/tom/Haskell/haskell-opaleye" $ \repo -> do
                     ("origin/master":branches)
                     (fmap tc d)
 
+      list = do
+        S.yield "<ul>"
+        S.for (S.each branches) $ \branch ->
+          case Data.Map.lookup (branch, "origin/master") d of
+            Nothing -> error ("Couldn't find branch " ++ branch)
+            Just r  -> case r of
+              Right _ -> return ()
+              Left Git.Conflicts -> S.yield ("<li>"
+                                             ++ "&#x274c;"
+                                             ++ " &mdash; "
+                                             ++ branch
+                                             ++ " conflicts with master"
+                                             ++ "</li>")
+              Left Git.Clean     -> S.yield ("<li>"
+                                             ++ "&#x26a0;"
+                                             ++ " &mdash; "
+                                             ++ branch
+                                             ++ " rebases cleanly on master"
+                                             ++ "</li>")
+        S.yield "</ul>"
+
       html = do
         S.yield "<html>"
+        list
         S.yield "<p>"
         tableToHtml table
         S.yield "</p>"
