@@ -58,13 +58,13 @@ status repo hash1 hash2 = do
     Just ord -> return (Right ord)
     Nothing  -> fmap Left (canRebaseOnto repo hash1 hash2)
 
--- gitRebase x y
+-- gitRebase hash x y
 --
 -- Rebase x onto y
 canRebaseOnto :: Repo -> Hash -> Hash -> IO RebaseStatus
 canRebaseOnto (Repo repo) (Hash hash) (Hash onto) =
   System.Directory.withCurrentDirectory repo $ do
-  (exit, out, err) <- proc "git" ["rebase", hash, onto]
+  (exit, out, err) <- proc "git" ["rebase", onto, hash]
   status_ <- case exit of
     System.Exit.ExitSuccess     -> return Clean
     System.Exit.ExitFailure 128 -> do
