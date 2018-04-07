@@ -149,14 +149,16 @@ mainOld = do
 
 data Status = Cloning | CompletedRebasing Int Int
 
-doRepoString mmap tmap path = do
+sendStatus tmap myThreadId message =
+  Data.IORef.modifyIORef tmap
+                         (Data.Map.insert (show myThreadId) (Left message))
+
+
+doRepoString mmap sendStatustmap path = do
   threadId <- Control.Concurrent.forkIO $ do
     myThreadId <- Control.Concurrent.myThreadId
 
-    let status message =
-          Data.IORef.modifyIORef
-              tmap
-              (Data.Map.insert (show myThreadId) (Left message))
+    let status = sendStatustmap myThreadId
 
     let statusTyped = status . \case
           CompletedRebasing n total ->
@@ -204,7 +206,7 @@ main :: IO ()
 main = do
   mmap <- Data.IORef.newIORef Data.Map.empty
   tmap <- Data.IORef.newIORef Data.Map.empty
-  Server.mainOn (doRepoString mmap tmap) (doThread tmap)
+  Server.mainOn (doRepoString mmap (sendStatus tmap)) (doThread tmap)
 
 -- This is not at all thread safe
 memoize :: Ord t
