@@ -49,7 +49,12 @@ doRepo :: Monad m
   => Maybe _
   -> String
   -> IO (S.Stream (S.Of [Char]) m ())
-doRepo mmap repoPath = Git.withClone repoPath $ \repo -> do
+doRepo mmap repoPath = Git.withClone repoPath $ \result -> case result of
+  Left  err  -> do
+    return (S.yield ("Couldn't clone " ++ repoPath))
+  Right repo -> doRepoSuccess mmap repo
+
+doRepoSuccess mmap repo = do
   branches <- Git.remoteBranches repo
 
   let branch_hashes = S.for (S.each branches) $ \branch -> do

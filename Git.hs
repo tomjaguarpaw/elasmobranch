@@ -24,20 +24,22 @@ data Repo = Repo String deriving Show
 
 -- FIXME test for failure
 withClone :: String
-          -> (Repo -> IO a)
+          -> (Either String Repo -> IO a)
           -> IO a
 withClone repo f = do
   System.IO.Temp.withSystemTempDirectory "" $ \temp -> do
-    (_, _, _) <- proc "git" [ "clone"
+    (exitCode, _, err) <- proc "git" [ "clone"
 --                          , "--depth=1"
 --                          , "--no-single-branch"
 -- If we shallow clone then we need to
 --         git fetch --unshallow origin master
-                            , repo
-                            , temp
-                            ]
+                                     , repo
+                                     , temp
+                                     ]
                             Nothing
-    f (Repo temp)
+    case exitCode of
+      System.Exit.ExitFailure _ -> f (Left err)
+      System.Exit.ExitSuccess   -> f (Right (Repo temp))
 
 remoteBranches :: Repo -> IO [String]
 remoteBranches (Repo repo) = do
