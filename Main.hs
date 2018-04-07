@@ -185,7 +185,7 @@ doRepoString mmap sendStatustmap path = do
           ++ "</p></body></html>")
 
 doThread readStatus_ threadId = do
-  mhtml <- readStatus_
+  mhtml <- readStatus_ threadId
   case mhtml of
     Nothing -> return ("<html>"
                        ++ "<head><title>Invalid report ID</title></head>"
