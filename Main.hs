@@ -143,6 +143,10 @@ main = do
   mmap <- Data.IORef.newIORef Data.Map.empty
   Server.mainOn (doRepoString (Just mmap))
 
+memoize :: Ord t
+        => Data.IORef.IORef (Data.Map.Map t a)
+        -> (t -> IO a)
+        -> t -> IO a
 memoize memomap f x = do
   map_ <- Data.IORef.readIORef memomap
   case Data.Map.lookup x map_ of
