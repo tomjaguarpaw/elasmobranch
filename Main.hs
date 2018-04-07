@@ -104,30 +104,20 @@ doRepoSuccess mmap repo = do
         S.yield "<ul>"
         S.for (S.each branches) $ \branch ->
           let key = (branch, "origin/master")
+              li (sym, s) = "<li>" ++ sym ++ " &mdash; " ++ s ++ "</li>"
+
           in case Data.Map.lookup key d of
             Nothing -> error ("Couldn't find key " ++ show key ++ " in "
                               ++ show (Data.Map.keys d))
-            Just r  -> case r of
-              Right Data.Ord.GT -> S.yield ("<li>"
-                                            ++ "&#x1f5d1;"
-                                            ++ " &mdash; "
-                                            ++ branch
-                                            ++ " is behind master"
-                                            ++ "</li>")
-              Right Data.Ord.EQ -> return ()
-              Right Data.Ord.LT -> return ()
-              Left Git.Conflicts -> S.yield ("<li>"
-                                             ++ "&#x274c;"
-                                             ++ " &mdash; "
-                                             ++ branch
-                                             ++ " conflicts with master"
-                                             ++ "</li>")
-              Left Git.Clean     -> S.yield ("<li>"
-                                             ++ "&#x26a0;"
-                                             ++ " &mdash; "
-                                             ++ branch
-                                             ++ " rebases cleanly on master"
-                                             ++ "</li>")
+            Just r  -> traverse (S.yield . li) $ case r of
+              Right Data.Ord.GT ->
+                Just ("&#x1f5d1;", branch ++ " is behind master")
+              Right Data.Ord.EQ -> Nothing
+              Right Data.Ord.LT -> Nothing
+              Left Git.Conflicts ->
+                Just ("&#x274c;", branch ++ " conflicts with master")
+              Left Git.Clean     ->
+                Just ("&#x26a0;", branch ++ " rebases cleanly on master")
         S.yield "</ul>"
 
       html = do
