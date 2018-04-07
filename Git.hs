@@ -27,6 +27,8 @@ withClone repo f = do
     (_, _, _) <- proc "git" [ "clone"
 --                          , "--depth=1"
 --                          , "--no-single-branch"
+-- If we shallow clone then we need to
+--         git fetch --unshallow origin master
                             , repo
                             , temp
                             ]
