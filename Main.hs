@@ -78,8 +78,8 @@ main = Git.withClone "/home/tom/Haskell/haskell-opaleye" $ \repo -> do
 
       table = Table (drop 7)
                     (take 3 . drop 7)
-                    ("origin/master":branches)
                     branches
+                    ("origin/master":branches)
                     (fmap tc d)
 
       html = do
