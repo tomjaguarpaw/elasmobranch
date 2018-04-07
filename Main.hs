@@ -43,7 +43,7 @@ tableToHtml (Table fleft ftop lefts tops m) = do
 -- "https://github.com/tomjaguarpaw/product-profunctors.git"
 
 main :: IO ()
-main = Git.withClone "/home/tom/Haskell/haskell-opaleye" $ \repo -> do
+main = Git.withClone "file:///home/tom/Haskell/haskell-opaleye" $ \repo -> do
   putStrLn $ if Git.test
     then "Tests passed"
     else "OH NO MY TESTS FAILED!!!"
