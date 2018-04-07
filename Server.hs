@@ -50,9 +50,10 @@ index = do
 
   let html = ("<html>"
               ++ "<head><title>Elasmobranch</title></head>"
-              ++ "<body><p>Submit the URL to a git repository. "
-              ++ "You may have to wait a while.  If it gets stuck "
-              ++ " then try reloading the page each time.</p>"
+              ++ "<body>"
+              ++ "<h1>Elasmobranch</h1>"
+              ++ "<p>Submit the URL to a git repository "
+              ++ "and I'll tell you about the branch status</p>"
               ++ "<form action='/repo' method='GET'>"
               ++ "<input type='text' name='repo'>"
               ++ "<input type='submit'>"
