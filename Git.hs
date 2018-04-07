@@ -11,8 +11,10 @@ proc :: FilePath
      -> [String]
      -> Maybe FilePath
      -> IO (System.Exit.ExitCode, String, String)
-proc x y dir = System.Process.readCreateProcessWithExitCode createProcess stdin
-  where createProcess = (System.Process.proc x y) { System.Process.cwd = dir }
+proc program arguments dir =
+  System.Process.readCreateProcessWithExitCode createProcess stdin
+  where createProcess = (System.Process.proc program arguments)
+                          { System.Process.cwd = dir }
         stdin = ""
 
 -- Git
