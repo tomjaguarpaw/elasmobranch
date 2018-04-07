@@ -88,6 +88,10 @@ doRepoSuccess mmap repo = do
       grey   = "#cccccc"
       white  = "#ffffff"
 
+      wastebasket  = "&#x1f5d1;"
+      cross_mark   = "&#x274c;"
+      warning_sign = "&#x26a0;"
+
       tc (Left Git.Conflicts) = TableCell red "&nbsp;"
       tc (Left Git.Clean)     = TableCell yellow "&nbsp;"
       tc (Right Data.Ord.GT)  = TableCell grey "&nbsp;"
@@ -111,13 +115,13 @@ doRepoSuccess mmap repo = do
                               ++ show (Data.Map.keys d))
             Just r  -> traverse (S.yield . li) $ case r of
               Right Data.Ord.GT ->
-                Just ("&#x1f5d1;", branch ++ " is behind master")
+                Just (wastebasket, branch ++ " is behind master")
               Right Data.Ord.EQ -> Nothing
               Right Data.Ord.LT -> Nothing
               Left Git.Conflicts ->
-                Just ("&#x274c;", branch ++ " conflicts with master")
+                Just (cross_mark, branch ++ " conflicts with master")
               Left Git.Clean     ->
-                Just ("&#x26a0;", branch ++ " rebases cleanly on master")
+                Just (warning_sign, branch ++ " rebases cleanly on master")
         S.yield "</ul>"
 
       html = do
