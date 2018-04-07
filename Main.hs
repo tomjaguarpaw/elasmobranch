@@ -108,7 +108,14 @@ doRepoSuccess mmap repo = do
             Nothing -> error ("Couldn't find key " ++ show key ++ " in "
                               ++ show (Data.Map.keys d))
             Just r  -> case r of
-              Right _ -> return ()
+              Right Data.Ord.GT -> S.yield ("<li>"
+                                            ++ "&#x1f5d1;"
+                                            ++ " &mdash; "
+                                            ++ branch
+                                            ++ " is behind master"
+                                            ++ "</li>")
+              Right Data.Ord.EQ -> return ()
+              Right Data.Ord.LT -> return ()
               Left Git.Conflicts -> S.yield ("<li>"
                                              ++ "&#x274c;"
                                              ++ " &mdash; "
