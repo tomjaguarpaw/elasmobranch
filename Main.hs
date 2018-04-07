@@ -98,7 +98,7 @@ main = tempDirectory $ \temp -> do
 --                          , "--depth=1"
 --                          , "--no-single-branch"
 --                          , "https://github.com/tomjaguarpaw/product-profunctors.git"
-                          , "/home/tom/Haskell/haskell-opaleye"                          
+                          , "/home/tom/Haskell/haskell-opaleye"
                           , temp
                           ]
 
