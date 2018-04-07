@@ -143,6 +143,7 @@ main = do
   mmap <- Data.IORef.newIORef Data.Map.empty
   Server.mainOn (doRepoString (Just mmap))
 
+-- This is not at all thread safe
 memoize :: Ord t
         => Data.IORef.IORef (Data.Map.Map t a)
         -> (t -> IO a)
@@ -151,10 +152,8 @@ memoize memomap f x = do
   map_ <- Data.IORef.readIORef memomap
   case Data.Map.lookup x map_ of
     Nothing -> do
-      putStrLn "Storing in the map"
       exit <- f x
       Data.IORef.writeIORef memomap (Data.Map.insert x exit map_)
       return exit
     Just exit -> do
-      putStrLn "It's already in the map!"
       return exit
