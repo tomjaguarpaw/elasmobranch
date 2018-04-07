@@ -52,10 +52,23 @@ tableToHtml (Table fleft ftop es m) = do
                             ++ c ++ ";'>" ++ s ++ "</td>")
         table s = S.yield "<table>" >> s >> S.yield "</table>"
 
+-- FIXME test for failure
+withClone repo f = do
+  tempDirectory $ \temp -> do
+    (_, _, _) <- proc "git" [ "clone"
+--                          , "--depth=1"
+--                          , "--no-single-branch"
+--                          , "https://github.com/tomjaguarpaw/product-profunctors.git"
+                            , repo
+                            , temp
+                            ]
+    f (Repo temp)
+
 originBranches :: String -> [String]
 originBranches out = tail (flip fmap (lines out) $ \originBranch -> drop 2 originBranch)
 
 data Hash = Hash String deriving Show
+data Repo = Repo String deriving Show
 
 -- FIXME: Check for error
 revParse :: String -> IO Hash
@@ -66,8 +79,9 @@ revParse branch = do
 -- gitRebase x y
 --
 -- Rebase x onto y
-canRebaseOnto :: Hash -> Hash -> IO RebaseStatus
-canRebaseOnto (Hash hash) (Hash onto) = do
+canRebaseOnto :: Repo -> Hash -> Hash -> IO RebaseStatus
+canRebaseOnto (Repo repo) (Hash hash) (Hash onto) =
+  System.Directory.withCurrentDirectory repo $ do
   (exit, out, err) <- proc "git" ["rebase", hash, onto]
   status <- case exit of
     System.Exit.ExitSuccess     -> return Clean
@@ -82,8 +96,9 @@ canRebaseOnto (Hash hash) (Hash onto) = do
 
   return status
 
-isAncestorOf :: Hash -> Hash -> IO Bool
-isAncestorOf (Hash potentialAncestor) (Hash potentialDescendant) = do
+isAncestorOf :: Repo -> Hash -> Hash -> IO Bool
+isAncestorOf (Repo repo) (Hash potentialAncestor) (Hash potentialDescendant) =
+  System.Directory.withCurrentDirectory repo $ do
   (exitStatus, _, _) <- proc "git" [ "merge-base"
                                    , "--is-ancestor"
                                    , potentialAncestor
@@ -97,54 +112,49 @@ isAncestorOf (Hash potentialAncestor) (Hash potentialDescendant) = do
       error ("Didn't expect git merge-base --is-ancestor "
               ++ "to return " ++ show a)
 
-compareHash :: Hash -> Hash -> IO (Maybe Ordering)
-compareHash hash1 hash2 = do
-  a <- hash1 `isAncestorOf` hash2
-  b <- hash2 `isAncestorOf` hash1
+compareHash :: Repo -> Hash -> Hash -> IO (Maybe Ordering)
+compareHash repo hash1 hash2 = do
+  a <- hash1 `isAncestorOf_` hash2
+  b <- hash2 `isAncestorOf_` hash1
 
   return $ case (a, b) of
     (True, True)   -> Just Data.Ord.EQ
     (True, False)  -> Just Data.Ord.GT
     (False, True)  -> Just Data.Ord.LT
     (False, False) -> Nothing
+  where isAncestorOf_ = isAncestorOf repo
 
 
 data RebaseStatus = Conflicts | Clean deriving Show
 
-status :: Hash -> Hash -> IO (Either RebaseStatus Ordering)
-status hash1 hash2 = do
-  mord <- compareHash hash1 hash2
+status :: Repo -> Hash -> Hash -> IO (Either RebaseStatus Ordering)
+status repo hash1 hash2 = do
+  mord <- compareHash repo hash1 hash2
 
   case mord of
     Just ord -> return (Right ord)
-    Nothing  -> fmap Left (canRebaseOnto hash1 hash2)
+    Nothing  -> fmap Left (canRebaseOnto repo hash1 hash2)
 
 test :: Bool
 test = originBranches "  origin/HEAD -> origin/master\n  origin/master\n  origin/partial-type-signatures"
        == ["origin/master", "origin/partial-type-signatures"]
 
 
-main = tempDirectory $ \temp -> do
+main = withClone "/home/tom/Haskell/haskell-opaleye" $ \(Repo repo) -> do
   putStrLn $ if test
     then "Tests passed"
     else "OH NO MY TESTS FAILED!!!"
 
-  -- FIXME test for failure
-  (_, _, _) <- proc "git" [ "clone"
---                          , "--depth=1"
---                          , "--no-single-branch"
---                          , "https://github.com/tomjaguarpaw/product-profunctors.git"
-                          , "/home/tom/Haskell/haskell-opaleye"
-                          , temp
-                          ]
+--  System.Directory.setCurrentDirectory temp
 
-  System.Directory.setCurrentDirectory temp
 
-  (_, out, err) <- proc "git" ["branch", "--remote"]
-  putStrLn out
-  putStrLn err
+  out <- System.Directory.withCurrentDirectory repo $ do
+    (_, out, err) <- proc "git" ["branch", "--remote"]
+    putStrLn out
+    putStrLn err
+    return out
 
-  let branches = take 4 (drop 1 (originBranches out))
+  let branches = take 6 (drop 1 (originBranches out))
   print branches
 
   let branch_hashes = S.for (S.each branches) $ \branch -> do
@@ -155,7 +165,7 @@ main = tempDirectory $ \temp -> do
       branchpairs =
         S.for branch_hashes $ \(branch1, hash1) -> do
           S.for branch_hashes $ \(branch2, hash2) -> do
-            exit <- S.lift (hash1 `status` hash2)
+            exit <- S.lift (status (Repo repo) hash1 hash2)
 
             S.yield ((branch1, branch2), exit)
 
