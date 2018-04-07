@@ -1,23 +1,16 @@
 module Git where
 
 import qualified Data.Ord
-import           Control.Monad.Trans.Resource (runResourceT)
-import           Control.Applicative (empty)
-import           Data.Maybe (fromJust)
-import qualified Data.Map
-import qualified Data.List as L
-import qualified Data.Traversable as T
 import qualified System.IO.Temp
 import qualified System.Process
 import qualified System.Directory
 import qualified System.Exit
-import qualified Streaming as S
-import qualified Streaming.Prelude as S
 
 -- Utils
 
-tempDirectory = System.IO.Temp.withSystemTempDirectory ""
-
+proc :: FilePath
+     -> [String]
+     -> IO (System.Exit.ExitCode, String, String)
 proc x y = System.Process.readProcessWithExitCode x y ""
 
 -- Git
@@ -30,7 +23,7 @@ withClone :: String
           -> (Repo -> IO a)
           -> IO a
 withClone repo f = do
-  tempDirectory $ \temp -> do
+  System.IO.Temp.withSystemTempDirectory "" $ \temp -> do
     (_, _, _) <- proc "git" [ "clone"
 --                          , "--depth=1"
 --                          , "--no-single-branch"
@@ -69,10 +62,10 @@ canRebaseOnto :: Repo -> Hash -> Hash -> IO RebaseStatus
 canRebaseOnto (Repo repo) (Hash hash) (Hash onto) =
   System.Directory.withCurrentDirectory repo $ do
   (exit, out, err) <- proc "git" ["rebase", hash, onto]
-  status <- case exit of
+  status_ <- case exit of
     System.Exit.ExitSuccess     -> return Clean
     System.Exit.ExitFailure 128 -> do
-      proc "git" ["rebase", "--abort"]
+      _ <- proc "git" ["rebase", "--abort"]
       return Conflicts
     System.Exit.ExitFailure a   -> do
       error ("Did not expect git rebase to return " ++ show a)
@@ -80,7 +73,7 @@ canRebaseOnto (Repo repo) (Hash hash) (Hash onto) =
   putStrLn out
   putStrLn err
 
-  return status
+  return status_
 
 isAncestorOf :: Repo -> Hash -> Hash -> IO Bool
 isAncestorOf (Repo repo) (Hash potentialAncestor) (Hash potentialDescendant) =

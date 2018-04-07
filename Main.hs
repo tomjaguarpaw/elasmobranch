@@ -2,17 +2,8 @@
 {-# LANGUAGE PartialTypeSignatures     #-}
 {-# LANGUAGE ExistentialQuantification #-}
 
-import qualified Data.Ord
 import           Control.Monad.Trans.Resource (runResourceT)
-import           Control.Applicative (empty)
-import           Data.Maybe (fromJust)
 import qualified Data.Map
-import qualified Data.List as L
-import qualified Data.Traversable as T
-import qualified System.IO.Temp
-import qualified System.Process
-import qualified System.Directory
-import qualified System.Exit
 import qualified Streaming as S
 import qualified Streaming.Prelude as S
 import qualified Git
@@ -30,26 +21,27 @@ tableToHtml :: Monad m
 tableToHtml (Table fleft ftop es m) = do
   table $ do
     row $ do
-      cell "white" ""
+      cell (TableCell "white" "")
       S.for (S.each es) $ \top ->
-        cell "white" (ftop top)
+        cell (TableCell "white" (ftop top))
 
     S.for (S.each es) $ \left -> do
       row $ do
-        cell "white" (fleft left)
+        cell (TableCell "white" (fleft left))
 
         S.for (S.each es) $ \top -> do
           case Data.Map.lookup (top, left) m of
-                  Just (TableCell c t)  -> cell c t
+                  Just tc  -> cell tc
                   Nothing -> error (show (top, left))
 
   where row s = S.yield "<tr>" >> s >> S.yield "</tr>"
-        cell c s = S.yield ("<td style='background-color: "
-                            ++ c ++ ";'>" ++ s ++ "</td>")
+        cell tc = S.yield ("<td style='background-color: "
+                            ++ tcColor tc ++ ";'>" ++ tcString tc ++ "</td>")
         table s = S.yield "<table>" >> s >> S.yield "</table>"
 
 -- "https://github.com/tomjaguarpaw/product-profunctors.git"
 
+main :: IO ()
 main = Git.withClone "/home/tom/Haskell/haskell-opaleye" $ \repo -> do
   putStrLn $ if Git.test
     then "Tests passed"
