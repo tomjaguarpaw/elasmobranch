@@ -55,8 +55,8 @@ index = do
               ++ "<p>Submit the URL to a git repository "
               ++ "and I'll tell you about the branch status</p>"
               ++ "<form action='/repo' method='GET'>"
-              ++ "<input type='text' name='repo'>"
-              ++ "<input type='submit'>"
+              ++ "<p><input type='text' name='repo' size='100'></p>"
+              ++ "<p><input type='submit'></p>"
               ++ "</form>"
               ++ "</body></html>")
 
