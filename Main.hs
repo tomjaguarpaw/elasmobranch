@@ -49,7 +49,7 @@ doRepo mmap repoPath = Git.withClone repoPath $ \repo -> do
     then "Tests passed"
     else "OH NO MY TESTS FAILED!!!"
 
-  branches <- fmap (take 8 . drop 1) (Git.remoteBranches repo)
+  branches <- Git.remoteBranches repo
 
   let branch_hashes = S.for (S.each branches) $ \branch -> do
         hash <- S.lift (Git.revParse repo branch)
@@ -58,20 +58,16 @@ doRepo mmap repoPath = Git.withClone repoPath $ \repo -> do
   bhm_ S.:> _ <- S.toList branch_hashes
   let bhm = S.each bhm_
 
-  let branchpairs :: S.Stream (S.Of _) IO ()
-      branchpairs =
-        S.for bhm $ \(branch1, hash1) -> do
-          S.for bhm $ \(branch2, hash2) -> do
-            exit <- S.lift $ do
+  let checkit hash1 hash2 = let f = Git.status repo hash1 hash2 in
+        case mmap of
+          Nothing -> f
+          Just map -> do
               -- This is not at all thread safe
-              case mmap of
-                Nothing -> Git.status repo hash1 hash2
-                Just map -> do
                   map_ <- Data.IORef.readIORef map
                   case Data.Map.lookup (hash1, hash2) map_ of
                     Nothing -> do
                       putStrLn "Storing in the map"
-                      exit <- Git.status repo hash1 hash2
+                      exit <- f
                       Data.IORef.writeIORef map
                                             (Data.Map.insert (hash1, hash2)
                                                              exit
@@ -80,6 +76,12 @@ doRepo mmap repoPath = Git.withClone repoPath $ \repo -> do
                     Just exit -> do
                       putStrLn "It's already in the map!"
                       return exit
+
+  let branchpairs :: S.Stream (S.Of _) IO ()
+      branchpairs =
+        S.for bhm $ \(branch1, hash1) -> do
+          S.for bhm $ \(branch2, hash2) -> do
+            exit <- S.lift $ checkit hash1 hash2
             S.yield ((branch1, branch2), exit)
 
   let result = branchpairs
@@ -109,8 +111,10 @@ doRepo mmap repoPath = Git.withClone repoPath $ \repo -> do
       list = do
         S.yield "<ul>"
         S.for (S.each branches) $ \branch ->
-          case Data.Map.lookup (branch, "origin/master") d of
-            Nothing -> error ("Couldn't find branch " ++ branch)
+          let key = (branch, "origin/master")
+          in case Data.Map.lookup key d of
+            Nothing -> error ("Couldn't find key " ++ show key ++ " in "
+                              ++ show (Data.Map.keys d))
             Just r  -> case r of
               Right _ -> return ()
               Left Git.Conflicts -> S.yield ("<li>"
@@ -143,12 +147,12 @@ mainOld = do
   html <- doRepo Nothing "file:///home/tom/Haskell/haskell-opaleye"
   runResourceT (S.writeFile "/tmp/foo.html" html)
 
-doRepoString map path = do
-  html <- doRepo map path
+doRepoString mmap path = do
+  html <- doRepo mmap path
   l S.:> _ <- S.toList html
   return (concat l)
 
 main :: IO ()
 main = do
-  map <- Data.IORef.newIORef Data.Map.empty
-  Server.mainOn (doRepoString (Just map))
+  mmap <- Data.IORef.newIORef Data.Map.empty
+  Server.mainOn (doRepoString (Just mmap))
