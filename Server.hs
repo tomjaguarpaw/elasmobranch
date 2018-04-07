@@ -24,7 +24,6 @@ repo :: (String -> IO String)
 repo genHtml = do
   HL.method HL.GET
   repoPath <- HL.look "repo"
-  liftIO (putStrLn "Here2")
   
   html <- liftIO (genHtml repoPath)
 

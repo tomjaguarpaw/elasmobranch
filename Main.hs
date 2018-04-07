@@ -2,6 +2,7 @@
 {-# LANGUAGE PartialTypeSignatures     #-}
 {-# LANGUAGE ExistentialQuantification #-}
 
+import qualified Data.IORef
 import qualified Data.Ord
 import           Control.Monad.Trans.Resource (runResourceT)
 import qualified Data.Map
@@ -43,7 +44,7 @@ tableToHtml (Table fleft ftop lefts tops m) = do
 
 -- "https://github.com/tomjaguarpaw/product-profunctors.git"
 
-doRepo repoPath = Git.withClone repoPath $ \repo -> do
+doRepo mmap repoPath = Git.withClone repoPath $ \repo -> do
   putStrLn $ if Git.test
     then "Tests passed"
     else "OH NO MY TESTS FAILED!!!"
@@ -61,8 +62,24 @@ doRepo repoPath = Git.withClone repoPath $ \repo -> do
       branchpairs =
         S.for bhm $ \(branch1, hash1) -> do
           S.for bhm $ \(branch2, hash2) -> do
-            exit <- S.lift (Git.status repo hash1 hash2)
-
+            exit <- S.lift $ do
+              -- This is not at all thread safe
+              case mmap of
+                Nothing -> Git.status repo hash1 hash2
+                Just map -> do
+                  map_ <- Data.IORef.readIORef map
+                  case Data.Map.lookup (hash1, hash2) map_ of
+                    Nothing -> do
+                      putStrLn "Storing in the map"
+                      exit <- Git.status repo hash1 hash2
+                      Data.IORef.writeIORef map
+                                            (Data.Map.insert (hash1, hash2)
+                                                             exit
+                                                             map_)
+                      return exit
+                    Just exit -> do
+                      putStrLn "It's already in the map!"
+                      return exit
             S.yield ((branch1, branch2), exit)
 
   let result = branchpairs
@@ -123,13 +140,15 @@ doRepo repoPath = Git.withClone repoPath $ \repo -> do
 
 mainOld :: IO ()
 mainOld = do
-  html <- doRepo "file:///home/tom/Haskell/haskell-opaleye"
+  html <- doRepo Nothing "file:///home/tom/Haskell/haskell-opaleye"
   runResourceT (S.writeFile "/tmp/foo.html" html)
 
-doRepoString path = do
-  html <- doRepo path
+doRepoString map path = do
+  html <- doRepo map path
   l S.:> _ <- S.toList html
   return (concat l)
 
 main :: IO ()
-main = Server.mainOn doRepoString
+main = do
+  map <- Data.IORef.newIORef Data.Map.empty
+  Server.mainOn (doRepoString (Just map))

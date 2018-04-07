@@ -15,7 +15,7 @@ proc x y = System.Process.readProcessWithExitCode x y ""
 
 -- Git
 
-data Hash = Hash String deriving Show
+data Hash = Hash String deriving (Show, Eq, Ord)
 data Repo = Repo String deriving Show
 
 -- FIXME test for failure
