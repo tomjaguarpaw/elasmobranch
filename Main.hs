@@ -66,7 +66,7 @@ revParse branch = do
 -- gitRebase x y
 --
 -- Rebase x onto y
-canRebaseOnto :: Hash -> Hash -> IO _
+canRebaseOnto :: Hash -> Hash -> IO RebaseStatus
 canRebaseOnto (Hash hash) (Hash onto) = do
   (exit, out, err) <- proc "git" ["rebase", hash, onto]
   status <- case exit of
