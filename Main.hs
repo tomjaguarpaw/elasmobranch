@@ -132,10 +132,12 @@ doRepoSuccess mmap statusTyped repo = do
         S.yield "<html>"
         S.yield "<head><title>elasmobranch</title></head>"
         S.yield "<body>"
+        S.yield submitAnother
         list
         S.yield "<p>"
         tableToHtml table
         S.yield "</p>"
+        S.yield submitAnother
         S.yield "</body></html>"
 
   return html
@@ -182,7 +184,11 @@ doRepoString mmap sendStatustmap path = do
           ++ " will appear at <a href='/thread?thread="
           ++ show threadId
           ++ "'>" ++ show threadId ++ "</a>"
-          ++ "</p></body></html>")
+          ++ "</p>"
+          ++ submitAnother
+          ++ "</body></html>")
+
+submitAnother = "<p><a href='/'>&#x25c0; Submit another repo</a></p>"
 
 doThread readStatus_ threadId = do
   mhtml <- readStatus_ threadId
@@ -191,6 +197,7 @@ doThread readStatus_ threadId = do
                        ++ "<head><title>Invalid report ID</title></head>"
                        ++ "<body>"
                        ++ "<p>This doesn't appear to be a valid report ID</p>"
+                       ++ submitAnother
                        ++ "</body></html>")
     Just (Left s) -> return
                        ("<html>"
@@ -201,6 +208,7 @@ doThread readStatus_ threadId = do
                         ++ "I'll refresh every 5 seconds to check for it "
                         ++ "or you can do that manually.</p>"
                         ++ "<p>elasmobranch says \"" ++ s ++ "\"</p>"
+                        ++ submitAnother
                         ++ "</body></html>")
     Just (Right html) -> return html
 
