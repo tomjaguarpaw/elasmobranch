@@ -1,3 +1,5 @@
+{-# LANGUAGE PartialTypeSignatures #-}
+
 module Server where
 
 import qualified Data.String
@@ -11,15 +13,18 @@ instance HL.ToMessage HTMLString where
   toContentType _ = Data.String.fromString "text/html; charset=UTF-8"
   toMessage (HTMLString s) = HL.toMessage s
 
-mainOn :: (String -> IO String) -> IO ()
-mainOn genHtml = do HL.serve (Just HL.defaultServerConfig { HL.port = 12382 })
-                             (myApp genHtml)
+mainOn :: (String -> IO String)
+       -> (String -> IO String)
+       -> IO ()
+mainOn genHtml genThread =
+  do HL.serve (Just HL.defaultServerConfig { HL.port = 12382 })
+              (myApp genHtml genThread)
 
-myApp :: (String -> IO String)
-      -> HL.ServerPart HL.Response
-myApp genHtml = HL.msum [ HL.dir "repo" (repo genHtml)
-                        , index
-                        ]
+myApp genHtml genThread =
+  HL.msum [ HL.dir "repo" (repo genHtml)
+          , HL.dir "thread" (thread genThread)
+          , index
+          ]
 
 repo :: (String -> IO String)
      -> HL.ServerPart HL.Response
@@ -28,6 +33,14 @@ repo genHtml = do
   repoPath <- HL.look "repo"
   
   html <- liftIO (genHtml repoPath)
+
+  HL.ok (HL.toResponse (HTMLString html))
+
+thread genThread = do
+  HL.method HL.GET
+  thread <- HL.look "thread"
+
+  html <- liftIO (genThread thread)
 
   HL.ok (HL.toResponse (HTMLString html))
 

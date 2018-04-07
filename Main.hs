@@ -2,6 +2,7 @@
 {-# LANGUAGE PartialTypeSignatures     #-}
 {-# LANGUAGE ExistentialQuantification #-}
 
+import qualified Control.Concurrent
 import qualified Data.IORef
 import qualified Data.Ord
 import           Control.Monad.Trans.Resource (runResourceT)
@@ -44,6 +45,10 @@ tableToHtml (Table fleft ftop lefts tops m) = do
 
 -- "https://github.com/tomjaguarpaw/product-profunctors.git"
 
+doRepo :: Monad m
+  => Maybe _
+  -> String
+  -> IO (S.Stream (S.Of [Char]) m ())
 doRepo mmap repoPath = Git.withClone repoPath $ \repo -> do
   branches <- Git.remoteBranches repo
 
@@ -129,15 +134,51 @@ mainOld = do
   html <- doRepo Nothing "file:///home/tom/Haskell/haskell-opaleye"
   runResourceT (S.writeFile "/tmp/foo.html" html)
 
-doRepoString mmap path = do
-  html <- doRepo mmap path
-  l S.:> _ <- S.toList html
-  return (concat l)
+doRepoString mmap tmap path = do
+  threadId <- Control.Concurrent.forkIO $ do
+    myThreadId <- Control.Concurrent.myThreadId
+
+    Data.IORef.modifyIORef tmap (Data.Map.insert (show myThreadId) (Left ()))
+
+    html <- doRepo (Just mmap) path
+    l S.:> _ <- S.toList html
+    let htmlString = concat l
+
+    Data.IORef.modifyIORef tmap (Data.Map.insert (show myThreadId) (Right htmlString))
+
+  return ("<html><head><title>elasmobranch: Link to your report</title></head>"
+          ++ "<body><p>The report for <code>"
+          ++ path
+          ++ "</code>"
+          ++ " will appear at <a href='/thread?thread="
+          ++ show threadId
+          ++ "'>" ++ show threadId ++ "</a>"
+          ++ "</p></body></html>")
+
+doThread tmap threadId = do
+  mhtml <- fmap (Data.Map.lookup threadId) (Data.IORef.readIORef tmap)
+  case mhtml of
+    Nothing -> return ("<html>"
+                       ++ "<head><title>Invalid report ID</title></head>"
+                       ++ "<body>"
+                       ++ "<p>This doesn't appear to be a valid report ID</p>"
+                       ++ "</body></html>")
+    Just (Left ()) -> return
+                       ("<html>"
+                        ++ "<head><meta http-equiv='refresh' content='5' >"
+                        ++ "<title>Waiting for report to be generated</title></head>"
+                        ++ "<body>"
+                        ++ "<p>I haven't finished generating your report yet. "
+                        ++ "I'll refresh every 5 seconds to check for it "
+                        ++ "or you can do that manually.</p>"
+                        ++ "</body></html>")
+    Just (Right html) -> return html
 
 main :: IO ()
 main = do
   mmap <- Data.IORef.newIORef Data.Map.empty
-  Server.mainOn (doRepoString (Just mmap))
+  tmap <- Data.IORef.newIORef Data.Map.empty
+  Server.mainOn (doRepoString mmap tmap) (doThread tmap)
 
 -- This is not at all thread safe
 memoize :: Ord t
