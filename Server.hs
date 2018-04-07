@@ -17,7 +17,9 @@ mainOn genHtml = do HL.serve (Just HL.defaultServerConfig { HL.port = 12382 })
 
 myApp :: (String -> IO String)
       -> HL.ServerPart HL.Response
-myApp genHtml = HL.msum [ HL.dir "repo" (repo genHtml) ]
+myApp genHtml = HL.msum [ HL.dir "repo" (repo genHtml)
+                        , index
+                        ]
 
 repo :: (String -> IO String)
      -> HL.ServerPart HL.Response
@@ -26,5 +28,21 @@ repo genHtml = do
   repoPath <- HL.look "repo"
   
   html <- liftIO (genHtml repoPath)
+
+  HL.ok (HL.toResponse (HTMLString html))
+
+index :: HL.ServerPart HL.Response
+index = do
+  HL.method HL.GET
+
+  let html = ("<html>"
+              ++ "<head><title>Elasmobranch</title></head>"
+              ++ "<body><p>Submit the URL to a git repository. "
+              ++ "You may have to wait a while</p>"
+              ++ "<form action='/repo' method='GET'>"
+              ++ "<input type='text' name='repo'>"
+              ++ "<input type='submit'>"
+              ++ "</form>"
+              ++ "</body></html>")
 
   HL.ok (HL.toResponse (HTMLString html))
