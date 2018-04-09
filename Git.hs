@@ -47,7 +47,9 @@ remoteBranches (Repo repo) = do
   return (originBranches out)
 
 originBranches :: String -> [String]
-originBranches out = tail (flip fmap (lines out) $ \originBranch -> drop 2 originBranch)
+originBranches out = filter (not . startsWith "origin/HEAD ")
+                            (flip fmap (lines out) $ \originBranch -> drop 2 originBranch)
+  where startsWith start target = take (length start) target == start
 
 -- FIXME: Check for error
 revParse :: Repo -> String -> IO Hash
@@ -115,5 +117,5 @@ data RebaseStatus = Conflicts | Clean deriving Show
 -- Test
 
 test :: Bool
-test = originBranches "  origin/HEAD -> origin/master\n  origin/master\n  origin/partial-type-signatures"
-       == ["origin/master", "origin/partial-type-signatures"]
+test = originBranches "  origin/100\n  origin/HEAD -> origin/master\n  origin/master\n  origin/partial-type-signatures"
+       == ["origin/100", "origin/master", "origin/partial-type-signatures"]
