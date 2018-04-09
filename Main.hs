@@ -105,9 +105,12 @@ doRepoSuccess mmap statusTyped repo = do
 
       table = Table (drop 7)
                     (take 3 . drop 7)
-                    branches
-                    ("origin/master":branches)
+                    branchesWithMasterFirst
+                    branchesWithMasterFirst
                     (fmap tc d)
+        where branchesWithMasterFirst = master:branchesNotMaster
+              master = "origin/master"
+              branchesNotMaster = filter (/= master) branches
 
       list = do
         S.yield "<ul>"
