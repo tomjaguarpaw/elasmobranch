@@ -54,7 +54,7 @@ repoAtDirectory path = do
   case exitCode of
     System.Exit.ExitSuccess     -> do
         (exitCode2, _, _) <- proc "git" ["diff-index", "--quiet", "HEAD", "--"] (Just dir)
-        case exitCode of
+        case exitCode2 of
           System.Exit.ExitSuccess   -> return (Just (RADRepo (Repo dir)))
           System.Exit.ExitFailure 1 -> return (Just (RADRepoDirty (RepoDirty dir)))
           System.Exit.ExitFailure a -> error ("Didn't expect git diff-index "
@@ -72,11 +72,11 @@ data InProgress = IPRebase
 what'sInProgress :: RepoDirty
                  -> IO (Maybe InProgress)
 what'sInProgress (RepoDirty dir) = do
-  mergeHeadExists <- System.Directory.doesPathExist (dir ++ ".git/MERGE_HEAD")
-  mergeModeExists <- System.Directory.doesPathExist (dir ++ ".git/MERGE_MODE")
-  mergeMsgExists  <- System.Directory.doesPathExist (dir ++ ".git/MERGE_MSG")
+  mergeHeadExists <- System.Directory.doesPathExist (dir ++ "/.git/MERGE_HEAD")
+  mergeModeExists <- System.Directory.doesPathExist (dir ++ "/.git/MERGE_MODE")
+  mergeMsgExists  <- System.Directory.doesPathExist (dir ++ "/.git/MERGE_MSG")
 
-  rebaseApplyExists  <- System.Directory.doesPathExist (dir ++ ".git/rebase-apply")
+  rebaseApplyExists  <- System.Directory.doesPathExist (dir ++ "/.git/rebase-apply")
 
   return $ case ((mergeHeadExists, mergeModeExists, mergeMsgExists), rebaseApplyExists) of
    ((True, True, True), False)    -> Just IPMerge
