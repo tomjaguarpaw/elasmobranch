@@ -240,8 +240,7 @@ mainCommandLine :: IO ()
 mainCommandLine = do
   args <- System.Environment.getArgs
 
-  putStrLn "My name is elasmobranch panic.  I'm here to help you."
-  putStrLn ""
+  putStrLn "Hello, my name is elasmobranch panic.  I'm here to help you."
   putStrLn "Don't worry!  We'll get out of this situation."
   putStrLn ""
 
