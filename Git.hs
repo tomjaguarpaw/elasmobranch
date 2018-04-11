@@ -1,6 +1,7 @@
 module Git where
 
 import qualified Data.Ord
+import qualified System.Directory
 import qualified System.IO.Temp
 import qualified System.Process
 import qualified System.Exit
@@ -63,6 +64,29 @@ repoAtDirectory path = do
     System.Exit.ExitFailure a   -> error ("Didn't expect git rev-parse "
                                           ++ "--show-toplevel to return "
                                           ++ show a)
+
+data InProgress = IPRebase
+                | IPMerge
+                | IPStashPop
+
+what'sInProgress :: RepoDirty
+                 -> IO (Maybe InProgress)
+what'sInProgress (RepoDirty dir) = do
+  mergeHeadExists <- System.Directory.doesPathExist (dir ++ ".git/MERGE_HEAD")
+  mergeModeExists <- System.Directory.doesPathExist (dir ++ ".git/MERGE_MODE")
+  mergeMsgExists  <- System.Directory.doesPathExist (dir ++ ".git/MERGE_MSG")
+
+  rebaseApplyExists  <- System.Directory.doesPathExist (dir ++ ".git/rebase-apply")
+
+  return $ case ((mergeHeadExists, mergeModeExists, mergeMsgExists), rebaseApplyExists) of
+   ((True, True, True), False)    -> Just IPMerge
+   ((False, False, False), True)  -> Just IPRebase
+   -- This is not yet right because we haven't checked stash pop.
+   -- Need to check it when we find a way.
+   --
+   --     https://stackoverflow.com/questions/49774200/how-to-tell-if-my-git-repo-is-in-a-conflict/49774399#49774399
+   ((False, False, False), False) -> Nothing
+   unexpected -> error ("Unexpected combination of conflict markers: " ++ show unexpected)
 
 remoteBranches :: Repo -> IO [String]
 remoteBranches (Repo repo) = do
