@@ -234,6 +234,11 @@ mainCommandLine :: IO ()
 mainCommandLine = do
   args <- System.Environment.getArgs
 
+  putStrLn "Hello this is elasmobranch panic.  I'm here to help you."
+  putStrLn ""
+  putStrLn "Don't worry!  We'll get out of this situation."
+  putStrLn ""
+
   let directory = case args of
         []    -> return  "."
         [dir] -> return dir
@@ -249,7 +254,9 @@ mainCommandLine = do
        Just (Git.RADRepoDirty repo) -> do
          wip <- Git.what'sInProgress repo
          putStrLn $ case wip of
-           Nothing         -> "I guess you've got some normal changes"
+           Nothing         -> ("I guess you've got some normal changes. "
+                               ++ "I don't see anything wrong here "
+                               ++ "and I'm not trained to help you further")
            Just Git.IPRebase   -> "In a rebase"
            Just Git.IPMerge    -> "In a merge"
            Just Git.IPStashPop -> "In a stash pop"
