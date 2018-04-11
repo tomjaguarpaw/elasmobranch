@@ -3,6 +3,8 @@
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE LambdaCase                #-}
 
+module Main (module Main) where
+
 import qualified Control.Concurrent
 import qualified Data.IORef
 import qualified Data.Ord
@@ -10,6 +12,7 @@ import           Control.Monad.Trans.Resource (runResourceT)
 import qualified Data.Map
 import qualified Streaming as S
 import qualified Streaming.Prelude as S
+import qualified System.Environment
 import qualified Git
 import qualified Server
  
@@ -226,6 +229,26 @@ main = do
       readStatus_ = readStatus tmap
 
   Server.mainOn (doRepoString mmap sendStatus_) (doThread readStatus_)
+
+mainCommandLine :: IO ()
+mainCommandLine = do
+  args <- System.Environment.getArgs
+
+  case args of
+   []    -> putStrLn "Need a single argument, a directory"
+   [dir] -> do
+     mRepo <- Git.repoAtDirectory dir
+     case mRepo of
+      Nothing   -> putStrLn "There's no git repo there"
+      Just (Git.RADRepo _) -> putStrLn "It's a clean repo!"
+      Just (Git.RADRepoDirty repo) -> do
+          wip <- Git.what'sInProgress repo
+          putStrLn $ case wip of
+           Nothing         -> "I guess you've got some normal changes"
+           Just Git.IPRebase   -> "In a rebase"
+           Just Git.IPMerge    -> "In a merge"
+           Just Git.IPStashPop -> "In a stash pop"
+   _     -> putStrLn "Need a single argument, a directory"
 
 -- This is not at all thread safe
 memoize :: Ord t
