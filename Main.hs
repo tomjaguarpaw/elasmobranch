@@ -263,13 +263,20 @@ mainCommandLine = do
            Nothing         -> ("I guess you've got some normal changes. "
                                ++ "I don't see anything wrong here "
                                ++ "and I'm not trained to help you further.")
-           Just Git.IPRebase   -> ("You're in a rebase. "
+           Just Git.IPRebase   -> ("You're in a rebase conflict. "
                                    ++ "If you want to abort it do\n\n"
                                    ++ "    git rebase --abort")
-           Just Git.IPMerge    -> ("You're in a merge. "
+           Just Git.IPMerge    -> ("You're in a merge conflict. "
                                    ++ "If you want to abort it do\n\n"
                                    ++ "    git merge --abort")
-           Just Git.IPStashPop -> "In a stash pop"
+           Just Git.IPStashPop -> ("In a stash pop conflict. "
+                                   ++ "If you want to abort it do\n\n"
+                                   ++ "    git reset HEAD\n\n"
+                                   ++ "and then to remove the popped changes "
+                                   ++ "from your working copy do\n\n"
+                                   ++ "    git checkout --patch\n\n"
+                                   ++ "(The popped changes still exist "
+                                   ++ "in the stash)")
     Left err -> putStrLn err
 
 -- This is not at all thread safe

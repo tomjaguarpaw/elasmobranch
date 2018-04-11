@@ -72,20 +72,29 @@ data InProgress = IPRebase
 what'sInProgress :: RepoDirty
                  -> IO (Maybe InProgress)
 what'sInProgress (RepoDirty dir) = do
-  mergeHeadExists <- System.Directory.doesPathExist (dir ++ "/.git/MERGE_HEAD")
-  mergeModeExists <- System.Directory.doesPathExist (dir ++ "/.git/MERGE_MODE")
-  mergeMsgExists  <- System.Directory.doesPathExist (dir ++ "/.git/MERGE_MSG")
+  let doesGitPathExist s = System.Directory.doesPathExist (dir ++ "/.git/" ++ s)
 
-  rebaseApplyExists  <- System.Directory.doesPathExist (dir ++ "/.git/rebase-apply")
+  mergeHeadExists    <- doesGitPathExist "MERGE_HEAD"
+  mergeModeExists    <- doesGitPathExist "MERGE_MODE"
+  mergeMsgExists     <- doesGitPathExist "MERGE_MSG"
+  rebaseApplyExists  <- doesGitPathExist "rebase-apply"
 
-  return $ case ((mergeHeadExists, mergeModeExists, mergeMsgExists), rebaseApplyExists) of
-   ((True, True, True), False)    -> Just IPMerge
-   ((False, False, False), True)  -> Just IPRebase
-   -- This is not yet right because we haven't checked stash pop.
-   -- Need to check it when we find a way.
-   --
-   --     https://stackoverflow.com/questions/49774200/how-to-tell-if-my-git-repo-is-in-a-conflict/49774399#49774399
-   ((False, False, False), False) -> Nothing
+  canCheckoutHEAD    <- do
+    (exitCode, _, _) <- proc "git" ["checkout", "HEAD"] (Just dir)
+    case exitCode of
+      System.Exit.ExitSuccess   -> return True
+      System.Exit.ExitFailure 1 -> return False
+      System.Exit.ExitFailure a -> error ("Didn't expect git rev-parse "
+                                          ++ "--show-toplevel to return "
+                                          ++ show a)
+
+  return $ case ((mergeHeadExists, mergeModeExists, mergeMsgExists),
+                 rebaseApplyExists,
+                 canCheckoutHEAD) of
+   ((True, True, True), False, False)    -> Just IPMerge
+   ((False, False, False), True, False)  -> Just IPRebase
+   ((False, False, False), False, False) -> Just IPStashPop
+   ((False, False, False), False, True) -> Nothing
    unexpected -> error ("Unexpected combination of conflict markers: " ++ show unexpected)
 
 remoteBranches :: Repo -> IO [String]
