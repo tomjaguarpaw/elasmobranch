@@ -8,6 +8,19 @@ import qualified System.Exit
 
 -- Utils
 
+procC :: FilePath
+      -> [String]
+      -> (System.Exit.ExitCode -> Maybe (String -> String -> IO r))
+      -> Maybe FilePath
+      -> IO r
+procC program arguments f dir = do
+  (exitCode, out, err) <- proc program arguments dir
+  case f exitCode of
+      Nothing ->
+        return (error ("Didn't expect '" ++ program ++ unwords arguments
+                        ++ " to return " ++ show exitCode))
+      Just g  -> g out err
+
 proc :: FilePath
      -> [String]
      -> Maybe FilePath
