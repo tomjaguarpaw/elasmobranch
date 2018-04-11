@@ -21,6 +21,10 @@ proc program arguments dir =
 
 data Hash = Hash String deriving (Show, Eq, Ord)
 data Repo = Repo String deriving Show
+data RepoDirty = RepoDirty String deriving Show
+
+data RepoAtDirectory = RADRepo Repo
+                     | RADRepoDirty RepoDirty
 
 -- FIXME test for failure
 withClone :: String
@@ -41,6 +45,25 @@ withClone repo f = do
       System.Exit.ExitFailure _ -> f (Left err)
       System.Exit.ExitSuccess   -> f (Right (Repo temp))
 
+repoAtDirectory :: FilePath
+                -> IO (Maybe RepoAtDirectory)
+repoAtDirectory path = do
+  (exitCode, out, _) <- proc "git" ["rev-parse", "--show-toplevel"] (Just path)
+  let dir = stripLast out
+  case exitCode of
+    System.Exit.ExitSuccess     -> do
+        (exitCode2, _, _) <- proc "git" ["diff-index", "--quiet", "HEAD", "--"] (Just dir)
+        case exitCode of
+          System.Exit.ExitSuccess   -> return (Just (RADRepo (Repo dir)))
+          System.Exit.ExitFailure 1 -> return (Just (RADRepoDirty (RepoDirty dir)))
+          System.Exit.ExitFailure a -> error ("Didn't expect git diff-index "
+                                              ++ "--quiet HEAD -- to return "
+                                              ++ show a)
+    System.Exit.ExitFailure 128 -> return Nothing
+    System.Exit.ExitFailure a   -> error ("Didn't expect git rev-parse "
+                                          ++ "--show-toplevel to return "
+                                          ++ show a)
+
 remoteBranches :: Repo -> IO [String]
 remoteBranches (Repo repo) = do
   (_, out, _) <- proc "git" ["branch", "--remote"] (Just repo)
@@ -51,12 +74,19 @@ originBranches out = filter (not . startsWith "origin/HEAD ")
                             (flip fmap (lines out) $ \originBranch -> drop 2 originBranch)
   where startsWith start target = take (length start) target == start
 
+-- Not technically accurate
+stripNewline :: String -> String
+stripNewline = stripLast
+
+stripLast :: String -> String
+stripLast s = take (length s - 1) s
+
 -- FIXME: Check for error
 revParse :: Repo -> String -> IO Hash
 revParse (Repo repo) branch = do
   (exit, out, err) <- proc "git" ["rev-parse", branch] (Just repo)
   case exit of
-    System.Exit.ExitSuccess   -> return (Hash (take (length out - 1) out))
+    System.Exit.ExitSuccess   -> return (Hash (stripLast out))
     System.Exit.ExitFailure _ -> error err
 
 status :: Repo -> Hash -> Hash -> IO (Either RebaseStatus Ordering)
