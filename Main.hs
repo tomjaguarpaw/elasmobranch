@@ -55,7 +55,8 @@ doRepo mmap statusTyped repoPath = Git.withClone repoPath $ \result -> case resu
     return (S.yield ("Couldn't clone " ++ repoPath))
   Right repo -> doRepoSuccess mmap statusTyped repo
 
-doRepoSuccess mmap statusTyped repo = do
+branchPairs :: _ -> _ -> Git.Repo -> _
+branchPairs mmap statusTyped repo = do
   branches <- Git.remoteBranches repo
 
   let branch_hashes = S.for (S.each branches) $ \branch -> do
@@ -90,7 +91,12 @@ doRepoSuccess mmap statusTyped repo = do
 
   let d = Data.Map.fromList l
 
-      red    = "#ff0000"
+  return (branches, d)
+
+doRepoSuccess mmap statusTyped repo = do
+  (branches, d) <- branchPairs mmap statusTyped repo
+
+  let red    = "#ff0000"
       yellow = "#ccff00"
       green  = "#00ff00"
       grey   = "#cccccc"
@@ -258,10 +264,10 @@ mainCommandLine = do
            Nothing         -> ("I guess you've got some normal changes. "
                                ++ "I don't see anything wrong here "
                                ++ "and I'm not trained to help you further.")
-           Just Git.IPRebase   -> ("You're in a rebase.\n\n"
+           Just Git.IPRebase   -> ("You're in a rebase. "
                                    ++ "If you want to abort it do\n\n"
                                    ++ "    git rebase --abort")
-           Just Git.IPMerge    -> ("You're in a merge.\n\n"
+           Just Git.IPMerge    -> ("You're in a merge. "
                                    ++ "If you want to abort it do\n\n"
                                    ++ "    git merge --abort")
            Just Git.IPStashPop -> "In a stash pop"
