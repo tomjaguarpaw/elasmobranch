@@ -234,21 +234,26 @@ mainCommandLine :: IO ()
 mainCommandLine = do
   args <- System.Environment.getArgs
 
-  case args of
-   []    -> putStrLn "Need a single argument, a directory"
-   [dir] -> do
-     mRepo <- Git.repoAtDirectory dir
-     case mRepo of
-      Nothing   -> putStrLn "There's no git repo there"
-      Just (Git.RADRepo _) -> putStrLn "It's a clean repo!"
-      Just (Git.RADRepoDirty repo) -> do
-          wip <- Git.what'sInProgress repo
-          putStrLn $ case wip of
+  let directory = case args of
+        []    -> return  "."
+        [dir] -> return dir
+        _     -> Left ("Give me zero arguments, or one argument which is the "
+                       ++ "directory of the git repo in question")
+
+  case directory of
+    Right dir -> do
+      mRepo <- Git.repoAtDirectory dir
+      case mRepo of
+       Nothing   -> putStrLn "There's no git repo there"
+       Just (Git.RADRepo _) -> putStrLn "It's a clean repo!"
+       Just (Git.RADRepoDirty repo) -> do
+         wip <- Git.what'sInProgress repo
+         putStrLn $ case wip of
            Nothing         -> "I guess you've got some normal changes"
            Just Git.IPRebase   -> "In a rebase"
            Just Git.IPMerge    -> "In a merge"
            Just Git.IPStashPop -> "In a stash pop"
-   _     -> putStrLn "Need a single argument, a directory"
+    Left err -> putStrLn err
 
 -- This is not at all thread safe
 memoize :: Ord t
