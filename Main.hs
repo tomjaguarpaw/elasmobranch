@@ -234,7 +234,7 @@ mainCommandLine :: IO ()
 mainCommandLine = do
   args <- System.Environment.getArgs
 
-  putStrLn "Hello this is elasmobranch panic.  I'm here to help you."
+  putStrLn "My name is elasmobranch panic.  I'm here to help you."
   putStrLn ""
   putStrLn "Don't worry!  We'll get out of this situation."
   putStrLn ""
@@ -257,9 +257,13 @@ mainCommandLine = do
          putStrLn $ case wip of
            Nothing         -> ("I guess you've got some normal changes. "
                                ++ "I don't see anything wrong here "
-                               ++ "and I'm not trained to help you further")
-           Just Git.IPRebase   -> "In a rebase"
-           Just Git.IPMerge    -> "In a merge"
+                               ++ "and I'm not trained to help you further.")
+           Just Git.IPRebase   -> ("You're in a rebase.\n\n"
+                                   ++ "If you want to abort it do\n\n"
+                                   ++ "    git rebase --abort")
+           Just Git.IPMerge    -> ("You're in a merge.\n\n"
+                                   ++ "If you want to abort it do\n\n"
+                                   ++ "    git merge --abort")
            Just Git.IPStashPop -> "In a stash pop"
     Left err -> putStrLn err
 
