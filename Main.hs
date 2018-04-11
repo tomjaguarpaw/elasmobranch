@@ -245,9 +245,10 @@ mainCommandLine = do
         _     -> Left ("Give me zero arguments, or one argument which is the "
                        ++ "directory of the git repo in question")
 
-  case directory of
-    Right dir -> do
-      mRepo <- Git.repoAtDirectory dir
+  situation <- traverse Git.repoAtDirectory directory
+
+  case situation of
+    Right mRepo -> do
       case mRepo of
        Nothing   -> putStrLn "There's no git repo there"
        Just (Git.RADRepo _) -> putStrLn "It's a clean repo!"
