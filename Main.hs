@@ -277,6 +277,9 @@ mainCommandLine = do
                                    ++ "    git checkout --patch\n\n"
                                    ++ "(The popped changes still exist "
                                    ++ "in the stash)")
+           Just Git.IPCherryPick -> ("You're in a cherry-pick conflict. "
+                                    ++ "If you want to abort it do\n\n"
+                                    ++ "    git cherry-pick --abort")
     Left err -> putStrLn err
 
 -- This is not at all thread safe

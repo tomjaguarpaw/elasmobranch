@@ -81,16 +81,18 @@ repoAtDirectory path = do
 data InProgress = IPRebase
                 | IPMerge
                 | IPStashPop
+                | IPCherryPick
 
 what'sInProgress :: RepoDirty
                  -> IO (Maybe InProgress)
 what'sInProgress (RepoDirty dir) = do
   let doesGitPathExist s = System.Directory.doesPathExist (dir ++ "/.git/" ++ s)
 
-  mergeHeadExists    <- doesGitPathExist "MERGE_HEAD"
-  mergeModeExists    <- doesGitPathExist "MERGE_MODE"
-  mergeMsgExists     <- doesGitPathExist "MERGE_MSG"
-  rebaseApplyExists  <- doesGitPathExist "rebase-apply"
+  mergeHeadExists      <- doesGitPathExist "MERGE_HEAD"
+  mergeModeExists      <- doesGitPathExist "MERGE_MODE"
+  mergeMsgExists       <- doesGitPathExist "MERGE_MSG"
+  rebaseApplyExists    <- doesGitPathExist "rebase-apply"
+  cherryPickHeadExists <- doesGitPathExist "CHERRY_PICK_HEAD"
 
   canCheckoutHEAD    <- do
     (exitCode, _, _) <- proc "git" ["checkout", "HEAD"] (Just dir)
@@ -101,13 +103,18 @@ what'sInProgress (RepoDirty dir) = do
                                           ++ "--show-toplevel to return "
                                           ++ show a)
 
+
+
   return $ case ((mergeHeadExists, mergeModeExists, mergeMsgExists),
                  rebaseApplyExists,
+                 cherryPickHeadExists,
                  canCheckoutHEAD) of
-   ((True, True, True), False, False)    -> Just IPMerge
-   ((False, False, False), True, False)  -> Just IPRebase
-   ((False, False, False), False, False) -> Just IPStashPop
-   ((False, False, False), False, True) -> Nothing
+   ((True,  True,  True),  False, False, False) -> Just IPMerge
+   ((False, False, False), True,  False, False) -> Just IPRebase
+   ((False, False, False), False, False, False) -> Just IPStashPop
+   ((False, False, True),  False, False, False) -> Just IPStashPop
+   ((False, False, True),  False, True,  False) -> Just IPCherryPick
+   ((False, False, False), False, False, True) -> Nothing
    unexpected -> error ("Unexpected combination of conflict markers: " ++ show unexpected)
 
 remoteBranches :: Repo -> IO [String]
