@@ -112,7 +112,6 @@ what'sInProgress (RepoDirty dir) = do
    ((True,  True,  True),  False, False, False) -> Just IPMerge
    ((False, False, False), True,  False, False) -> Just IPRebase
    ((False, False, False), False, False, False) -> Just IPStashPop
-   ((False, False, True),  False, False, False) -> Just IPStashPop
    ((False, False, True),  False, True,  False) -> Just IPCherryPick
    ((False, False, False), False, False, True) -> Nothing
    unexpected -> error ("Unexpected combination of conflict markers: " ++ show unexpected)
