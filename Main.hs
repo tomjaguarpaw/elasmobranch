@@ -280,7 +280,9 @@ mainCommandLine = do
                                    ++ "If you want to abort it do\n\n"
                                    ++ "    git merge --abort")
            Just Git.IPStashPop -> ("In a stash pop conflict. "
-                                   ++ "If you want to abort it do\n\n"
+                                   ++ "If you want to abort it try\n\n"
+                                   ++ "    git reset --merge\n\n"
+                                   ++ "If that doesn't work then do\n\n"
                                    ++ "    git reset HEAD\n\n"
                                    ++ "and then to remove the popped changes "
                                    ++ "from your working copy do\n\n"
