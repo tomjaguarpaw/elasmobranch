@@ -58,7 +58,7 @@ doRepo mmap statusTyped repoPath = Git.withClone repoPath $ \result -> case resu
 branchPairs' :: ((Git.Hash, Git.Hash) -> IO r)
              -> _
              -> _
-             -> IO ([String], Data.Map.Map (String, String) r)
+             -> IO ([Git.Branch], Data.Map.Map (Git.Branch, Git.Branch) r)
 branchPairs' checkit statusTyped repo = do
   branches <- Git.remoteBranches repo
 
@@ -120,19 +120,19 @@ doRepoSuccess mmap statusTyped repo = do
       tc (Right Data.Ord.LT)  = TableCell green "&nbsp;"
       tc (Right Data.Ord.EQ)  = TableCell white "&nbsp;"
 
-      table = Table (drop 7)
-                    (take 3 . drop 7)
+      table = Table (drop 7 . Git.branchName)
+                    (take 3 . drop 7 . Git.branchName)
                     branchesWithMasterFirst
                     branchesWithMasterFirst
                     (fmap tc d)
         where branchesWithMasterFirst = master:branchesNotMaster
-              master = "origin/master"
+              master = Git.Branch "origin/master"
               branchesNotMaster = filter (/= master) branches
 
       list = do
         S.yield "<ul>"
         S.for (S.each branches) $ \branch ->
-          let key = (branch, "origin/master")
+          let key = (branch, Git.Branch "origin/master")
               li (sym, s) = "<li>" ++ sym ++ " &mdash; " ++ s ++ "</li>"
 
           in case Data.Map.lookup key d of
@@ -140,13 +140,15 @@ doRepoSuccess mmap statusTyped repo = do
                               ++ show (Data.Map.keys d))
             Just r  -> traverse (S.yield . li) $ case r of
               Right Data.Ord.GT ->
-                Just (wastebasket, branch ++ " is behind master")
+                Just (wastebasket, Git.branchName branch ++ " is behind master")
               Right Data.Ord.EQ -> Nothing
               Right Data.Ord.LT -> Nothing
               Left Git.Conflicts ->
-                Just (cross_mark, branch ++ " conflicts with master")
+                Just (cross_mark, Git.branchName branch
+                                  ++ " conflicts with master")
               Left Git.Clean     ->
-                Just (warning_sign, branch ++ " rebases cleanly on master")
+                Just (warning_sign, Git.branchName branch
+                                    ++ " rebases cleanly on master")
         S.yield "</ul>"
 
       html = do

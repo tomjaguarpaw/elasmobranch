@@ -33,9 +33,13 @@ proc program arguments dir =
 
 -- Git
 
+data Branch = Branch String deriving (Show, Eq, Ord)
 data Hash = Hash String deriving (Show, Eq, Ord)
 data Repo = Repo String deriving Show
 data RepoDirty = RepoDirty String deriving Show
+
+branchName :: Branch -> String
+branchName (Branch branch) = branch
 
 data RepoAtDirectory = RADRepo Repo
                      | RADRepoDirty RepoDirty
@@ -116,10 +120,10 @@ what'sInProgress (RepoDirty dir) = do
    ((False, False, False), False, False, True) -> Nothing
    unexpected -> error ("Unexpected combination of conflict markers: " ++ show unexpected)
 
-remoteBranches :: Repo -> IO [String]
+remoteBranches :: Repo -> IO [Branch]
 remoteBranches (Repo repo) = do
   (_, out, _) <- proc "git" ["branch", "--remote"] (Just repo)
-  return (originBranches out)
+  return (map Branch (originBranches out))
 
 originBranches :: String -> [String]
 originBranches out = filter (not . startsWith "origin/HEAD ")
@@ -134,8 +138,11 @@ stripLast :: String -> String
 stripLast s = take (length s - 1) s
 
 -- FIXME: Check for error
-revParse :: Repo -> String -> IO Hash
-revParse (Repo repo) branch = do
+--
+-- TODO: We could expand this to being able to parse general
+-- revisions, as in gitrevisions(7)
+revParse :: Repo -> Branch -> IO Hash
+revParse (Repo repo) (Branch branch) = do
   (exit, out, err) <- proc "git" ["rev-parse", branch] (Just repo)
   case exit of
     System.Exit.ExitSuccess   -> return (Hash (stripLast out))
