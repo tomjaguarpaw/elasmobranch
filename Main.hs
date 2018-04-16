@@ -171,19 +171,17 @@ sendStatus tmap myThreadId message =
 
 readStatus tmap threadId = fmap (Data.Map.lookup threadId) (Data.IORef.readIORef tmap)
 
+statusMessage = \case
+  CompletedRebasing n total -> show n ++ "/" ++ show total ++ " rebases done"
+  Cloning -> "I am cloning the repo"
+
 doRepoString mmap sendStatustmap path = do
   threadId <- Control.Concurrent.forkIO $ do
     myThreadId <- Control.Concurrent.myThreadId
 
     let status = sendStatustmap myThreadId
 
-    let statusTyped = status . Left . statusMessage
-
-        statusMessage = \case
-          CompletedRebasing n total ->
-            show n ++ "/" ++ show total ++ " rebases done"
-          Cloning ->
-            "I am cloning the repo"
+    let statusTyped = status . Left
 
     statusTyped Cloning
     html <- doRepo mmap statusTyped path
@@ -224,7 +222,7 @@ doThread readStatus_ threadId = do
                         ++ "<p>I haven't finished generating your report yet. "
                         ++ "I'll refresh every 5 seconds to check for it "
                         ++ "or you can do that manually.</p>"
-                        ++ "<p>elasmobranch says \"" ++ s ++ "\"</p>"
+                        ++ "<p>elasmobranch says \"" ++  statusMessage s ++ "\"</p>"
                         ++ "</body></html>")
     Just (Right html) -> return html
 
