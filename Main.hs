@@ -48,8 +48,6 @@ tableToHtml (Table fleft ftop lefts tops m) = do
                             ++ tcString tc ++ "</td>")
         table s = S.yield "<table>" >> s >> S.yield "</table>"
 
--- "https://github.com/tomjaguarpaw/product-profunctors.git"
-
 doRepo mmap statusTyped repoPath = do
   statusTyped Cloning
   Git.withClone repoPath $ \result -> case result of
