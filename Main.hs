@@ -77,13 +77,13 @@ branchPairs checkit emitStatus repo = do
         S.lift (emitStatus (CompletedRebasing 0 totalRebasesToDo))
         S.for bhm $ \(branch1, hash1) -> do
           S.for bhm $ \(branch2, hash2) -> do
-            exit <- S.lift $ do
-              exit <- checkit repo (hash1, hash2)
+            result <- S.lift $ do
+              result <- checkit repo (hash1, hash2)
               Data.IORef.modifyIORef count (+1)
               soFar <- Data.IORef.readIORef count
               emitStatus (CompletedRebasing soFar totalRebasesToDo)
-              return exit
-            S.yield ((branch1, branch2), exit)
+              return result
+            S.yield ((branch1, branch2), result)
 
   l S.:> _ <- S.toList branchpairs
 
