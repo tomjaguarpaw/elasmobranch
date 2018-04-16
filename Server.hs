@@ -20,6 +20,9 @@ mainOn genHtml genThread =
   do HL.serve (Just HL.defaultServerConfig { HL.port = 12382 })
               (myApp genHtml genThread)
 
+myApp :: (String -> IO String)
+      -> (String -> IO String)
+      -> HL.ServerPart HL.Response
 myApp genHtml genThread =
   HL.msum [ HL.dir "repo" (repo genHtml)
           , HL.dir "thread" (thread genThread)
