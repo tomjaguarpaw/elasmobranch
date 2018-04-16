@@ -95,10 +95,7 @@ branchPairs :: _ -> (Status -> IO a) -> Git.Repo -> _
 branchPairs mmap emitStatus repo =
   let checkit :: (Git.Hash, Git.Hash)
               -> IO (Either Git.RebaseStatus Ordering)
-      checkit = (case mmap of
-        Nothing   -> id
-        Just mmap -> memoize mmap)
-          (uncurry (Git.status repo))
+      checkit = memoize mmap (uncurry (Git.status repo))
   in branchPairs' checkit emitStatus repo
 
 doRepoSuccess mmap statusTyped repo = do
@@ -165,13 +162,6 @@ doRepoSuccess mmap statusTyped repo = do
 
   return html
 
-mainOld :: IO ()
-mainOld = do
-  html <- doRepo Nothing
-                 (const (return ()))
-                 "file:///home/tom/Haskell/haskell-opaleye"
-  runResourceT (S.writeFile "/tmp/foo.html" html)
-
 data Status = Cloning
             | CompletedRebasing Int Int
 
@@ -196,7 +186,7 @@ doRepoString mmap sendStatustmap path = do
             "I am cloning the repo"
 
     statusTyped Cloning
-    html <- doRepo (Just mmap) statusTyped path
+    html <- doRepo mmap statusTyped path
     l S.:> _ <- S.toList html
     let htmlString = concat l
 
