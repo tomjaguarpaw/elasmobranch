@@ -303,10 +303,8 @@ memoize memomap f x = do
   map_ <- Data.IORef.readIORef memomap
   case Data.Map.lookup x map_ of
     Nothing -> do
-      putStrLn "New"
       exit <- f x
       Data.IORef.writeIORef memomap (Data.Map.insert x exit map_)
       return exit
     Just exit -> do
-      putStrLn "Existing"
       return exit
