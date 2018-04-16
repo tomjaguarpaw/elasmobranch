@@ -56,10 +56,10 @@ doRepo mmap statusTyped repoPath = Git.withClone repoPath $ \result -> case resu
   Right repo -> doRepoSuccess mmap statusTyped repo
 
 branchPairs' :: ((Git.Hash, Git.Hash) -> IO r)
-             -> _
-             -> _
+             -> (Status -> IO a)
+             -> Git.Repo
              -> IO ([Git.Branch], Data.Map.Map (Git.Branch, Git.Branch) r)
-branchPairs' checkit statusTyped repo = do
+branchPairs' checkit emitStatus repo = do
   branches <- Git.remoteBranches repo
 
   let branch_hashes = S.for (S.each branches) $ \branch -> do
@@ -80,26 +80,26 @@ branchPairs' checkit statusTyped repo = do
               exit <- checkit (hash1, hash2)
               Data.IORef.modifyIORef count (+1)
               soFar <- Data.IORef.readIORef count
-              statusTyped (CompletedRebasing soFar totalRebasesToDo)
+              emitStatus (CompletedRebasing soFar totalRebasesToDo)
               return exit
             S.yield ((branch1, branch2), exit)
 
-  statusTyped (CompletedRebasing 0 totalRebasesToDo)
+  emitStatus (CompletedRebasing 0 totalRebasesToDo)
   l S.:> _ <- S.toList branchpairs
 
   let d = Data.Map.fromList l
 
   return (branches, d)
 
-branchPairs :: _ -> _ -> Git.Repo -> _
-branchPairs mmap statusTyped repo =
+branchPairs :: _ -> (Status -> IO a) -> Git.Repo -> _
+branchPairs mmap emitStatus repo =
   let checkit :: (Git.Hash, Git.Hash)
               -> IO (Either Git.RebaseStatus Ordering)
       checkit = (case mmap of
         Nothing   -> id
         Just mmap -> memoize mmap)
           (uncurry (Git.status repo))
-  in branchPairs' checkit statusTyped repo
+  in branchPairs' checkit emitStatus repo
 
 doRepoSuccess mmap statusTyped repo = do
   (branches, d) <- branchPairs mmap statusTyped repo
@@ -187,7 +187,9 @@ doRepoString mmap sendStatustmap path = do
 
     let status = sendStatustmap myThreadId
 
-    let statusTyped = status . Left . \case
+    let statusTyped = status . Left . statusMessage
+
+        statusMessage = \case
           CompletedRebasing n total ->
             show n ++ "/" ++ show total ++ " rebases done"
           Cloning ->
