@@ -71,10 +71,10 @@ branchPairs checkit emitStatus repo = do
   let bhm = S.each bhm_
 
   let totalRebasesToDo = length bhm_ * length bhm_
-  count <- Data.IORef.newIORef 0
 
   let branchpairs :: S.Stream (S.Of _) IO ()
-      branchpairs =
+      branchpairs = do
+        count <- S.lift (Data.IORef.newIORef 0)
         S.for bhm $ \(branch1, hash1) -> do
           S.for bhm $ \(branch2, hash2) -> do
             exit <- S.lift $ do
