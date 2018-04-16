@@ -70,11 +70,11 @@ branchPairs checkit emitStatus repo = do
   bhm_ S.:> _ <- S.toList branch_hashes
   let bhm = S.each bhm_
 
-  let totalRebasesToDo = length bhm_ * length bhm_
-
   let branchpairs :: S.Stream (S.Of _) IO ()
       branchpairs = do
+        let totalRebasesToDo = length bhm_ * length bhm_
         count <- S.lift (Data.IORef.newIORef 0)
+        S.lift (emitStatus (CompletedRebasing 0 totalRebasesToDo))
         S.for bhm $ \(branch1, hash1) -> do
           S.for bhm $ \(branch2, hash2) -> do
             exit <- S.lift $ do
@@ -85,7 +85,6 @@ branchPairs checkit emitStatus repo = do
               return exit
             S.yield ((branch1, branch2), exit)
 
-  emitStatus (CompletedRebasing 0 totalRebasesToDo)
   l S.:> _ <- S.toList branchpairs
 
   let d = Data.Map.fromList l
