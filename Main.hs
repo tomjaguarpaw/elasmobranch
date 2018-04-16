@@ -50,11 +50,11 @@ tableToHtml (Table fleft ftop lefts tops m) = do
 
 -- "https://github.com/tomjaguarpaw/product-profunctors.git"
 
-doRepo mmap statusTyped repoPath = Git.withClone repoPath $ \result
-  -> case result of
-  Left  err  -> do
-    return (S.yield ("Couldn't clone " ++ repoPath))
-  Right repo -> doRepoSuccess mmap statusTyped repo
+doRepo mmap statusTyped repoPath = do
+  statusTyped Cloning
+  Git.withClone repoPath $ \result -> case result of
+    Left err   -> return (S.yield ("Couldn't clone " ++ repoPath))
+    Right repo -> doRepoSuccess mmap statusTyped repo
 
 branchPairs :: (Git.Repo -> (Git.Hash, Git.Hash) -> IO r)
             -> (Status -> IO a)
@@ -177,7 +177,7 @@ statusMessage = \case
 doRepoString :: (Git.Repo
                   -> (Git.Hash, Git.Hash)
                   -> IO (Either Git.RebaseStatus Ordering))
-             -> (Control.Concurrent.ThreadId -> Either Status [Char] -> IO ())
+             -> (Control.Concurrent.ThreadId -> Either Status String -> IO ())
              -> String
              -> IO String
 doRepoString mmap sendStatustmap path = do
@@ -188,7 +188,6 @@ doRepoString mmap sendStatustmap path = do
 
     let statusTyped = status . Left
 
-    statusTyped Cloning
     html <- doRepo mmap statusTyped path
     l S.:> _ <- S.toList html
     let htmlString = concat l
