@@ -50,12 +50,13 @@ tableToHtml (Table fleft ftop lefts tops m) = do
 
 -- "https://github.com/tomjaguarpaw/product-profunctors.git"
 
-doRepo mmap statusTyped repoPath = Git.withClone repoPath $ \result -> case result of
+doRepo mmap statusTyped repoPath = Git.withClone repoPath $ \result
+  -> case result of
   Left  err  -> do
     return (S.yield ("Couldn't clone " ++ repoPath))
   Right repo -> doRepoSuccess mmap statusTyped repo
 
-branchPairs' :: ((Git.Hash, Git.Hash) -> IO r)
+branchPairs' :: (Git.Repo -> (Git.Hash, Git.Hash) -> IO r)
              -> (Status -> IO a)
              -> Git.Repo
              -> IO ([Git.Branch], Data.Map.Map (Git.Branch, Git.Branch) r)
@@ -77,7 +78,7 @@ branchPairs' checkit emitStatus repo = do
         S.for bhm $ \(branch1, hash1) -> do
           S.for bhm $ \(branch2, hash2) -> do
             exit <- S.lift $ do
-              exit <- checkit (hash1, hash2)
+              exit <- checkit repo (hash1, hash2)
               Data.IORef.modifyIORef count (+1)
               soFar <- Data.IORef.readIORef count
               emitStatus (CompletedRebasing soFar totalRebasesToDo)
@@ -92,11 +93,7 @@ branchPairs' checkit emitStatus repo = do
   return (branches, d)
 
 branchPairs :: _ -> (Status -> IO a) -> Git.Repo -> _
-branchPairs mmap emitStatus repo =
-  let checkit :: (Git.Hash, Git.Hash)
-              -> IO (Either Git.RebaseStatus Ordering)
-      checkit = memoize mmap (uncurry (Git.status repo))
-  in branchPairs' checkit emitStatus repo
+branchPairs = branchPairs'
 
 doRepoSuccess mmap statusTyped repo = do
   (branches, d) <- branchPairs mmap statusTyped repo
@@ -231,10 +228,15 @@ main = do
   mmap <- Data.IORef.newIORef Data.Map.empty
   tmap <- Data.IORef.newIORef Data.Map.empty
 
+  let checkit :: Git.Repo
+              -> (Git.Hash, Git.Hash)
+              -> IO (Either Git.RebaseStatus Ordering)
+      checkit = memoize mmap . uncurry . Git.status
+
   let sendStatus_ = sendStatus tmap
       readStatus_ = readStatus tmap
 
-  Server.mainOn (doRepoString mmap sendStatus_) (doThread readStatus_)
+  Server.mainOn (doRepoString checkit sendStatus_) (doThread readStatus_)
 
 mainCommandLine :: IO ()
 mainCommandLine = do
