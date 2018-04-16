@@ -156,7 +156,7 @@ status repo hash1 hash2 = do
     Just ord -> return (Right ord)
     Nothing  -> fmap Left (canRebaseOnto repo hash1 hash2)
 
--- gitRebase hash x y
+-- git rebase hash x y
 --
 -- Rebase x onto y
 canRebaseOnto :: Repo -> Hash -> Hash -> IO RebaseStatus
