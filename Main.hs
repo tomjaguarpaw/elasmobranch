@@ -55,8 +55,11 @@ doRepo mmap statusTyped repoPath = Git.withClone repoPath $ \result -> case resu
     return (S.yield ("Couldn't clone " ++ repoPath))
   Right repo -> doRepoSuccess mmap statusTyped repo
 
-branchPairs :: _ -> _ -> Git.Repo -> _
-branchPairs mmap statusTyped repo = do
+branchPairs' :: ((Git.Hash, Git.Hash) -> IO r)
+             -> _
+             -> _
+             -> IO ([String], Data.Map.Map (String, String) r)
+branchPairs' checkit statusTyped repo = do
   branches <- Git.remoteBranches repo
 
   let branch_hashes = S.for (S.each branches) $ \branch -> do
@@ -65,11 +68,6 @@ branchPairs mmap statusTyped repo = do
 
   bhm_ S.:> _ <- S.toList branch_hashes
   let bhm = S.each bhm_
-
-  let checkit = (case mmap of
-        Nothing   -> id
-        Just mmap -> memoize mmap)
-          (uncurry (Git.status repo))
 
   let totalRebasesToDo = length bhm_ * length bhm_
   count <- Data.IORef.newIORef 0
@@ -92,6 +90,16 @@ branchPairs mmap statusTyped repo = do
   let d = Data.Map.fromList l
 
   return (branches, d)
+
+branchPairs :: _ -> _ -> Git.Repo -> _
+branchPairs mmap statusTyped repo =
+  let checkit :: (Git.Hash, Git.Hash)
+              -> IO (Either Git.RebaseStatus Ordering)
+      checkit = (case mmap of
+        Nothing   -> id
+        Just mmap -> memoize mmap)
+          (uncurry (Git.status repo))
+  in branchPairs' checkit statusTyped repo
 
 doRepoSuccess mmap statusTyped repo = do
   (branches, d) <- branchPairs mmap statusTyped repo
