@@ -91,7 +91,7 @@ branchPairs checkit emitStatus repo = do
 
 doRepoSuccess :: ((Git.Repo
                    -> (Git.Hash, Git.Hash)
-                   -> IO (Either Git.RebaseStatus Ordering))
+                   -> IO (Either (Git.RebaseStatus, Git.MergeStatus) Ordering))
               -> (Status -> IO a)
               -> Git.Repo
               -> IO (S.Stream (S.Of String) IO ()))
@@ -99,6 +99,7 @@ doRepoSuccess mmap statusTyped repo = do
   (branches, d) <- branchPairs mmap statusTyped repo
 
   let red    = "#ff0000"
+      orange = "#ffcc00"
       yellow = "#ccff00"
       green  = "#00ff00"
       grey   = "#cccccc"
@@ -108,8 +109,11 @@ doRepoSuccess mmap statusTyped repo = do
       cross_mark   = "&#x274c;"
       warning_sign = "&#x26a0;"
 
-      tc (Left Git.Conflicts) = TableCell red "&nbsp;"
-      tc (Left Git.Clean)     = TableCell yellow "&nbsp;"
+      tc (Left (Git.Conflicts, Git.MConflicts)) = TableCell red "&nbsp;"
+      tc (Left (Git.Conflicts, Git.MClean))     = TableCell orange "&nbsp;"
+      tc (Left (Git.Clean, Git.MConflicts))     = TableCell orange "&nbsp;"
+      tc (Left (Git.Clean, Git.MClean))         = TableCell yellow "&nbsp;"
+
       tc (Right Data.Ord.GT)  = TableCell grey "&nbsp;"
       tc (Right Data.Ord.LT)  = TableCell green "&nbsp;"
       tc (Right Data.Ord.EQ)  = TableCell white "&nbsp;"
@@ -137,12 +141,21 @@ doRepoSuccess mmap statusTyped repo = do
                 Just (wastebasket, Git.branchName branch ++ " is behind master")
               Right Data.Ord.EQ -> Nothing
               Right Data.Ord.LT -> Nothing
-              Left Git.Conflicts ->
+              Left (Git.Conflicts, Git.MConflicts) ->
                 Just (cross_mark, Git.branchName branch
                                   ++ " conflicts with master")
-              Left Git.Clean     ->
-                Just (warning_sign, Git.branchName branch
-                                    ++ " rebases cleanly on master")
+              Left (Git.Clean, Git.MConflicts) ->
+                Just (cross_mark, Git.branchName branch
+                                    ++ " rebases cleanly on master"
+                                    ++ " but does not merge")
+              Left (Git.Conflicts, Git.MClean) ->
+                Just (cross_mark, Git.branchName branch
+                                    ++ " merges cleanly into master"
+                                    ++ " but does not rebase")
+              Left (Git.Clean, Git.MClean) ->
+                Just (cross_mark, Git.branchName branch
+                                    ++ " merges cleanly into"
+                                    ++ " and rebases cleanly onto master")
         S.yield "</ul>"
 
       html = do
@@ -174,7 +187,7 @@ statusMessage = \case
 
 doRepoString :: (Git.Repo
                   -> (Git.Hash, Git.Hash)
-                  -> IO (Either Git.RebaseStatus Ordering))
+                  -> IO (Either (Git.RebaseStatus, Git.MergeStatus) Ordering))
              -> (Control.Concurrent.ThreadId -> Either Status String -> IO ())
              -> String
              -> IO String
@@ -235,7 +248,7 @@ main = do
 
   let checkit :: Git.Repo
               -> (Git.Hash, Git.Hash)
-              -> IO (Either Git.RebaseStatus Ordering)
+              -> IO (Either (Git.RebaseStatus, Git.MergeStatus) Ordering)
       checkit = memoize mmap . uncurry . Git.status
 
   let sendStatus_ = sendStatus tmap

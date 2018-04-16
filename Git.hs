@@ -148,13 +148,17 @@ revParse (Repo repo) (Branch branch) = do
     System.Exit.ExitSuccess   -> return (Hash (stripLast out))
     System.Exit.ExitFailure _ -> error err
 
-status :: Repo -> Hash -> Hash -> IO (Either RebaseStatus Ordering)
+status :: Repo -> Hash -> Hash -> IO (Either (RebaseStatus, MergeStatus) Ordering)
 status repo hash1 hash2 = do
   mord <- compareHash repo hash1 hash2
 
   case mord of
     Just ord -> return (Right ord)
-    Nothing  -> fmap Left (canRebaseOnto repo hash1 hash2)
+    Nothing  -> do
+      rebaseStatus <- canRebaseOnto repo hash1 hash2
+      mergeStatus  <- canMergeInto  repo hash1 hash2
+
+      return (Left (rebaseStatus, mergeStatus))
 
 -- git rebase hash x y
 --
@@ -164,11 +168,34 @@ canRebaseOnto (Repo repo) (Hash hash) (Hash onto) = do
   (exit, _, _) <- proc "git" ["rebase", onto, hash] (Just repo)
   status_ <- case exit of
     System.Exit.ExitSuccess     -> return Clean
+    System.Exit.ExitFailure 1 -> do
+      _ <- proc "git" ["rebase", "--abort"] (Just repo)
+      return Conflicts
     System.Exit.ExitFailure 128 -> do
       _ <- proc "git" ["rebase", "--abort"] (Just repo)
       return Conflicts
     System.Exit.ExitFailure a   -> do
-      error ("Did not expect git rebase to return " ++ show a)
+      error ("Did not expect git rebase to return " ++ show a
+            ++ " with git rebase " ++ onto ++ " " ++ hash)
+
+  return status_
+
+-- TODO: This is very similar to canRebaseOnto
+canMergeInto :: Repo -> Hash -> Hash -> IO MergeStatus
+canMergeInto (Repo repo) (Hash hash) (Hash into) = do
+  proc "git" ["checkout", into] (Just repo)
+  (exit, _, _) <- proc "git" ["merge", hash] (Just repo)
+  status_ <- case exit of
+    System.Exit.ExitSuccess     -> return MClean
+    System.Exit.ExitFailure 1 -> do
+      _ <- proc "git" ["merge", "--abort"] (Just repo)
+      return MConflicts
+    System.Exit.ExitFailure 128 -> do
+      _ <- proc "git" ["merge", "--abort"] (Just repo)
+      return MConflicts
+    System.Exit.ExitFailure a   -> do
+      error ("Did not expect git merge to return " ++ show a
+            ++ " with git merge " ++ into ++ " " ++ hash)
 
   return status_
 
@@ -202,6 +229,7 @@ compareHash repo hash1 hash2 = do
 
 
 data RebaseStatus = Conflicts | Clean deriving Show
+data MergeStatus = MConflicts | MClean deriving Show
 
 -- Test
 
