@@ -91,6 +91,12 @@ branchPairs checkit emitStatus repo = do
 
   return (branches, d)
 
+doRepoSuccess :: ((Git.Repo
+                   -> (Git.Hash, Git.Hash)
+                   -> IO (Either Git.RebaseStatus Ordering))
+              -> (Status -> IO a)
+              -> Git.Repo
+              -> IO (S.Stream (S.Of String) IO ()))
 doRepoSuccess mmap statusTyped repo = do
   (branches, d) <- branchPairs mmap statusTyped repo
 
@@ -168,6 +174,12 @@ statusMessage = \case
   CompletedRebasing n total -> show n ++ "/" ++ show total ++ " rebases done"
   Cloning -> "I am cloning the repo"
 
+doRepoString :: (Git.Repo
+                  -> (Git.Hash, Git.Hash)
+                  -> IO (Either Git.RebaseStatus Ordering))
+             -> (Control.Concurrent.ThreadId -> Either Status [Char] -> IO ())
+             -> String
+             -> IO String
 doRepoString mmap sendStatustmap path = do
   threadId <- Control.Concurrent.forkIO $ do
     myThreadId <- Control.Concurrent.myThreadId
