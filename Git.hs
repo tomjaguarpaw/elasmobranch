@@ -31,6 +31,19 @@ proc program arguments dir =
                           { System.Process.cwd = dir }
         stdin = ""
 
+procEnv :: FilePath
+        -> [String]
+        -> Maybe FilePath
+        -> Maybe [(String, String)]
+        -> IO (System.Exit.ExitCode, String, String)
+procEnv program arguments dir env =
+  System.Process.readCreateProcessWithExitCode createProcess stdin
+  where createProcess = (System.Process.proc program arguments)
+                          { System.Process.cwd = dir
+                          , System.Process.env = env
+                          }
+        stdin = ""
+
 -- Git
 
 data Branch = Branch String deriving (Show, Eq, Ord)
@@ -50,7 +63,10 @@ withClone :: String
           -> IO a
 withClone repo f = do
   System.IO.Temp.withSystemTempDirectory "" $ \temp -> do
-    (exitCode, _, err) <- proc "git" [ "clone"
+    let env = Just [("GIT_TERMINAL_PROMPT", "0")]
+    --- ^^ https://serverfault.com/a/665959
+
+    (exitCode, _, err) <- procEnv "git" [ "clone"
 --                          , "--depth=1"
 --                          , "--no-single-branch"
 -- If we shallow clone then we need to
@@ -59,6 +75,7 @@ withClone repo f = do
                                      , temp
                                      ]
                             Nothing
+                            env
     case exitCode of
       System.Exit.ExitFailure _ -> f (Left err)
       System.Exit.ExitSuccess   -> f (Right (Repo temp))
