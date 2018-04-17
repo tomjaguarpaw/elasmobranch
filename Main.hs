@@ -153,7 +153,7 @@ doRepoSuccess mmap statusTyped repo = do
                                     ++ " merges cleanly into master"
                                     ++ " but does not rebase")
               Left (Git.Clean, Git.MClean) ->
-                Just (cross_mark, Git.branchName branch
+                Just (warning_sign, Git.branchName branch
                                     ++ " merges cleanly into"
                                     ++ " and rebases cleanly onto master")
         S.yield "</ul>"
