@@ -3,6 +3,7 @@
 module Server where
 
 import qualified Data.String
+import qualified Data.Char
 import           Control.Monad.IO.Class (liftIO)
 import qualified Happstack.Lite as HL
 import           Happstack.Server.RqData as HL
@@ -26,6 +27,7 @@ myApp :: (String -> IO String)
 myApp genHtml genThread =
   HL.msum [ HL.dir "repo" (repo genHtml)
           , HL.dir "thread" (thread genThread)
+          , HL.dir "vsts" vsts
           , index
           ]
 
@@ -47,6 +49,21 @@ thread genThread = do
 
   HL.ok (HL.toResponse (HTMLString html))
 
+vsts = do
+  HL.method HL.GET
+  repo <- HL.look "repo"
+  pat  <- HL.look "pat"
+
+  let repoStripped = dropWhile Data.Char.isSpace repo
+      startsWithHttps = take 8 repoStripped == "https://"
+      horribleHackUrl = drop 8 repoStripped
+      repoWithPat = "https://" ++ pat ++ "@" ++ horribleHackUrl
+      redirectTo = "/repo?repo=" ++ repoWithPat
+
+  if startsWithHttps
+  then HL.seeOther redirectTo (HL.toResponse ())
+  else HL.ok (HL.toResponse (HTMLString "Your URL didn't seem to start with https://"))
+
 index :: HL.ServerPart HL.Response
 index = do
   HL.method HL.GET
@@ -61,6 +78,20 @@ index = do
               ++ "<p><input type='text' name='repo' size='100'></p>"
               ++ "<p><input type='submit'></p>"
               ++ "</form>"
+              ++ "<h2>VSTS repository</h2>"
+              ++ "<form action='/vsts' method='GET'>"
+              ++ "<p>Repository HTTPS URL: <input type='text' name='repo' size='100'></p>"
+              ++ "<p>Token: <input type='password' name='pat' size='100'></p>"
+              ++ "<p><input type='submit'></p>"
+              ++ "</form>"
+              ++ "<p><ul><li>"
+              ++ "You can get the repository URL by clicking on 'Clone' in the "
+              ++ "top right of your VSTS 'Code' page.</li>"
+              ++ "<li>You can get a personal "
+              ++ "access token by clicking on 'Create a Personal access token' in "
+              ++ "the credentials setting of the same 'Clone' dialog.  elasmobranch "
+              ++ "does not store the personal access token and you can revoke it "
+              ++ "any time in the VSTS security settings page.</li></p>"
               ++ "</body></html>")
 
   HL.ok (HL.toResponse (HTMLString html))
