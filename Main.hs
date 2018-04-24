@@ -298,7 +298,12 @@ mainCommandLine = do
                                    ++ "from your working copy do\n\n"
                                    ++ "    git checkout --patch\n\n"
                                    ++ "(The popped changes still exist "
-                                   ++ "in the stash)")
+                                   ++ "in the stash)\n\n"
+                                   ++ "If you have resolved the conflict "
+                                   ++ "and want to continue working without "
+                                   ++ "committing these changes then "
+                                   ++ "'git reset HEAD' is also the correct "
+                                   ++ "thing to do.")
            Just Git.IPCherryPick -> ("You're in a cherry-pick conflict. "
                                     ++ "If you want to abort it do\n\n"
                                     ++ "    git cherry-pick --abort")
