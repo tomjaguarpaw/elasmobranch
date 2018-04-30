@@ -174,6 +174,7 @@ doRepoSuccess mmap statusTyped repo = do
 
 data Status = Cloning
             | CompletedRebasing Int Int
+            deriving Show
 
 sendStatus tmap myThreadId message =
   Data.IORef.modifyIORef tmap
@@ -270,7 +271,7 @@ main = do
 mainLocal :: IO ()
 mainLocal = do
   args <- System.Environment.getArgs
-  html <- doRepoMatrix (\r -> uncurry (Git.status r)) (\_ -> return ()) (args !! 0)
+  html <- doRepoMatrix (\r -> uncurry (Git.status r)) print (args !! 0)
   putStrLn html
 
 mainCommandLine :: IO ()
