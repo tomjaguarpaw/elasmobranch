@@ -271,7 +271,17 @@ main = do
 mainLocal :: IO ()
 mainLocal = do
   args <- System.Environment.getArgs
-  html <- doRepoMatrix (\r -> uncurry (Git.status r)) print (args !! 0)
+
+  let repo = args !! 0
+
+  html <- doRepoMatrix (\r -> uncurry (Git.status r)) print repo
+
+  branches <- Git.remoteBranches (Git.Repo repo)
+
+  -- This is a big hack
+  flip mapM_ branches $ \(Git.Branch branch) ->
+    Git.proc "git" ["checkout", branch] (Just repo)
+
   writeFile (args !! 1) html
 
 mainCommandLine :: IO ()
