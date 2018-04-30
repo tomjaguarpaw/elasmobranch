@@ -13,6 +13,7 @@ import qualified Data.Map
 import qualified Streaming as S
 import qualified Streaming.Prelude as S
 import qualified System.Environment
+import qualified System.IO
 import qualified Git
 import qualified Server
  
@@ -274,13 +275,13 @@ mainLocal = do
 
   let repo = args !! 0
 
-  html <- doRepoMatrix (\r -> uncurry (Git.status r)) print repo
-
   branches <- Git.remoteBranches (Git.Repo repo)
 
   -- This is a big hack
   flip mapM_ branches $ \(Git.Branch branch) ->
     Git.proc "git" ["checkout", drop 7 branch] (Just repo)
+
+  html <- doRepoMatrix (\r -> uncurry (Git.status r)) (\r -> print r >> System.IO.hFlush System.IO.stdout) repo
 
   writeFile (args !! 1) html
 
