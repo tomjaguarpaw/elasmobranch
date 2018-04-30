@@ -185,6 +185,19 @@ statusMessage = \case
   CompletedRebasing n total -> show n ++ "/" ++ show total ++ " rebases done"
   Cloning -> "I am cloning the repo"
 
+doRepoMatrix :: (Git.Repo
+                 -> (Git.Hash, Git.Hash)
+                 -> IO (Either (Git.RebaseStatus, Git.MergeStatus) Ordering))
+             -> (Status -> IO a)
+             -> String
+             -> _
+doRepoMatrix mmap statusTyped path = do
+    html <- doRepo mmap statusTyped path
+    l S.:> _ <- S.toList html
+    let htmlString = concat l
+
+    return htmlString
+
 doRepoString :: (Git.Repo
                   -> (Git.Hash, Git.Hash)
                   -> IO (Either (Git.RebaseStatus, Git.MergeStatus) Ordering))
@@ -199,9 +212,7 @@ doRepoString mmap sendStatustmap path = do
 
     let statusTyped = status . Left
 
-    html <- doRepo mmap statusTyped path
-    l S.:> _ <- S.toList html
-    let htmlString = concat l
+    htmlString <- doRepoMatrix mmap statusTyped path
 
     status (Right htmlString)
 
@@ -255,6 +266,12 @@ main = do
       readStatus_ = readStatus tmap
 
   Server.mainOn (doRepoString checkit sendStatus_) (doThread readStatus_)
+
+mainLocal :: IO ()
+mainLocal = do
+  args <- System.Environment.getArgs
+  html <- doRepoMatrix (\r -> uncurry (Git.status r)) (\_ -> return ()) (args !! 0)
+  putStrLn html
 
 mainCommandLine :: IO ()
 mainCommandLine = do
