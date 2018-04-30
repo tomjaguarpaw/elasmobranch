@@ -280,7 +280,7 @@ mainLocal = do
 
   -- This is a big hack
   flip mapM_ branches $ \(Git.Branch branch) ->
-    Git.proc "git" ["checkout", branch] (Just repo)
+    Git.proc "git" ["checkout", drop 7 branch] (Just repo)
 
   writeFile (args !! 1) html
 
