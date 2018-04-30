@@ -277,6 +277,9 @@ mainLocal = do
 
   branches <- Git.remoteBranches (Git.Repo repo)
 
+  Git.proc "git" ["config", "--global", "user.email", "elasmobranch@example.com"] (Just repo)
+  Git.proc "git" ["config", "--global", "user.name", "Elasmobranch"] (Just repo)
+
   -- This is a big hack
   flip mapM_ branches $ \(Git.Branch branch) ->
     Git.proc "git" ["checkout", drop 7 branch] (Just repo)
