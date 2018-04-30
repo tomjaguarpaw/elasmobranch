@@ -272,7 +272,7 @@ mainLocal :: IO ()
 mainLocal = do
   args <- System.Environment.getArgs
   html <- doRepoMatrix (\r -> uncurry (Git.status r)) print (args !! 0)
-  putStrLn html
+  writeFile (args !! 1) html
 
 mainCommandLine :: IO ()
 mainCommandLine = do
