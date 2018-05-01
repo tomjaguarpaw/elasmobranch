@@ -224,7 +224,7 @@ doRepoMatrix :: (Git.Repo
                  -> IO (Either (Git.RebaseStatus, Git.MergeStatus) Ordering))
              -> (Status -> IO a)
              -> String
-             -> _
+             -> IO String
 doRepoMatrix mmap statusTyped path = do
     html <- doRepo mmap statusTyped path
     l S.:> _ <- S.toList html
