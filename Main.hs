@@ -273,6 +273,7 @@ doRepoString mmap sendStatustmap path = do
           ++ "</p>"
           ++ "</body></html>")
 
+submitAnother :: String
 submitAnother = "<p><a href='/'>&#x25c0; Submit another repo</a></p>"
 
 doThread readStatus_ threadId = do
