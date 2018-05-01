@@ -139,9 +139,15 @@ doRepoSuccess :: ((Git.Repo
               -> (Status -> IO a)
               -> Git.Repo
               -> IO (S.Stream (S.Of String) IO ()))
-doRepoSuccess mmap statusTyped repo = do
-  (branches, d) <- branchPairs mmap statusTyped repo
+doRepoSuccess mmap statusTyped repo =
+  produceTable =<< branchPairs mmap statusTyped repo
 
+produceTable :: ([Git.Branch],
+                 Data.Map.Map
+                   (Git.Branch, Git.Branch)
+                   (Either (Git.RebaseStatus, Git.MergeStatus) Ordering))
+             -> IO (S.Stream (S.Of String) IO ())
+produceTable (branches, d) = do
   let wastebasket  = "&#x1f5d1;"
       cross_mark   = "&#x274c;"
       warning_sign = "&#x26a0;"
