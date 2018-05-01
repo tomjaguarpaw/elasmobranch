@@ -49,10 +49,10 @@ tableToHtml (Table fleft ftop lefts tops m) = do
                             ++ tcString tc ++ "</td>")
         table s = S.yield "<table>" >> s >> S.yield "</table>"
 
-type CompareHashes r = Git.Repo -> (Git.Hash, Git.Hash) -> r
+type CompareHashes r = Git.Repo -> (Git.Hash, Git.Hash) -> IO r
 
-doRepo :: CompareHashes (IO (Either (Git.RebaseStatus, Git.MergeStatus)
-                                    Ordering))
+doRepo :: CompareHashes (Either (Git.RebaseStatus, Git.MergeStatus)
+                                Ordering)
        -> (Status -> IO a)
        -> String
        -> IO (S.Stream (S.Of String) IO ())
@@ -62,19 +62,18 @@ doRepo mmap statusTyped repoPath = do
     Left err   -> return (S.yield ("Couldn't clone " ++ repoPath))
     Right repo -> doRepoSuccess mmap statusTyped repo
 
-doRepoSuccess :: ((Git.Repo
-                   -> (Git.Hash, Git.Hash)
-                   -> IO (Either (Git.RebaseStatus, Git.MergeStatus) Ordering))
+doRepoSuccess :: CompareHashes (Either (Git.RebaseStatus, Git.MergeStatus)
+                                       Ordering)
               -> (Status -> IO a)
               -> Git.Repo
-              -> IO (S.Stream (S.Of String) IO ()))
+              -> IO (S.Stream (S.Of String) IO ())
 doRepoSuccess mmap statusTyped repo = do
   bhm_ <- Git.originBranchHashes repo
   t <- branchPairsFromHashes mmap statusTyped repo bhm_
   produceTable t
 
 branchPairsFromHashes :: Ord branch
-                      => (Git.Repo -> (Git.Hash, Git.Hash) -> IO r)
+                      => CompareHashes r
                       -> (Status -> IO a)
                       -> Git.Repo
                       -> [(branch, Git.Hash)]
@@ -237,9 +236,8 @@ statusMessage = \case
   CompletedRebasing n total -> show n ++ "/" ++ show total ++ " rebases done"
   Cloning -> "I am cloning the repo"
 
-doRepoMatrix :: (Git.Repo
-                 -> (Git.Hash, Git.Hash)
-                 -> IO (Either (Git.RebaseStatus, Git.MergeStatus) Ordering))
+doRepoMatrix :: (CompareHashes (Either (Git.RebaseStatus, Git.MergeStatus)
+                                       Ordering))
              -> (Status -> IO a)
              -> String
              -> IO String
@@ -250,9 +248,8 @@ doRepoMatrix mmap statusTyped path = do
 
     return htmlString
 
-doRepoString :: (Git.Repo
-                  -> (Git.Hash, Git.Hash)
-                  -> IO (Either (Git.RebaseStatus, Git.MergeStatus) Ordering))
+doRepoString :: (CompareHashes (Either (Git.RebaseStatus, Git.MergeStatus)
+                                       Ordering))
              -> (Control.Concurrent.ThreadId -> Either Status String -> IO ())
              -> String
              -> IO String
@@ -309,9 +306,8 @@ main = do
   mmap <- Data.IORef.newIORef Data.Map.empty
   tmap <- Data.IORef.newIORef Data.Map.empty
 
-  let checkit :: Git.Repo
-              -> (Git.Hash, Git.Hash)
-              -> IO (Either (Git.RebaseStatus, Git.MergeStatus) Ordering)
+  let checkit :: CompareHashes (Either (Git.RebaseStatus, Git.MergeStatus)
+                                       Ordering)
       checkit = memoize mmap . uncurry . Git.status
 
   let sendStatus_ = sendStatus tmap
