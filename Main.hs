@@ -226,10 +226,19 @@ data Status = Cloning
             | CompletedRebasing Int Int
             deriving Show
 
+sendStatus :: Show threadId
+           => Data.IORef.IORef (Data.Map.Map String status)
+           -> threadId
+           -> status
+           -> IO ()
 sendStatus tmap myThreadId message =
   Data.IORef.modifyIORef tmap
                          (Data.Map.insert (show myThreadId) message)
 
+readStatus :: Ord threadId
+           => Data.IORef.IORef (Data.Map.Map threadId status)
+           -> threadId
+           -> IO (Maybe status)
 readStatus tmap threadId = fmap (Data.Map.lookup threadId) (Data.IORef.readIORef tmap)
 
 statusMessage = \case
