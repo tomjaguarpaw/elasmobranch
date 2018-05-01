@@ -254,8 +254,7 @@ doRepoString mmap sendStatustmap path = do
     myThreadId <- Control.Concurrent.myThreadId
 
     let status = sendStatustmap myThreadId
-
-    let statusTyped = status . Left
+        statusTyped = status . Left
 
     htmlString <- doRepoMatrix mmap statusTyped path
 
