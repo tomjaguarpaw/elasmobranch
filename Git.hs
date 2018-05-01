@@ -143,8 +143,9 @@ remoteBranches (Repo repo) = do
   return (map Branch (originBranches out))
 
 originBranches :: String -> [String]
-originBranches out = filter (not . startsWith "origin/HEAD ")
-                            (fmap (\originBranch -> drop 2 originBranch) (lines out))
+originBranches = filter (not . startsWith "origin/HEAD ")
+                 . fmap (\originBranch -> drop 2 originBranch)
+                 . lines
   where startsWith start target = take (length start) target == start
 
 -- Not technically accurate
