@@ -49,6 +49,13 @@ tableToHtml (Table fleft ftop lefts tops m) = do
                             ++ tcString tc ++ "</td>")
         table s = S.yield "<table>" >> s >> S.yield "</table>"
 
+type CompareHashes r = Git.Repo -> (Git.Hash, Git.Hash) -> r
+
+doRepo :: CompareHashes (IO (Either (Git.RebaseStatus, Git.MergeStatus)
+                                    Ordering))
+       -> (Status -> IO a)
+       -> String
+       -> IO (S.Stream (S.Of String) IO ())
 doRepo mmap statusTyped repoPath = do
   statusTyped Cloning
   Git.withClone repoPath $ \result -> case result of
