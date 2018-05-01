@@ -6,6 +6,9 @@ import qualified System.IO.Temp
 import qualified System.Process
 import qualified System.Exit
 
+import qualified Streaming as S
+import qualified Streaming.Prelude as S
+
 -- Utils
 
 procC :: FilePath
@@ -136,6 +139,18 @@ what'sInProgress (RepoDirty dir) = do
    ((False, False, True),  False, True,  False) -> Just IPCherryPick
    ((False, False, False), False, False, True) -> Nothing
    unexpected -> error ("Unexpected combination of conflict markers: " ++ show unexpected)
+
+originBranchHashes :: Repo -> IO [(Branch, Hash)]
+originBranchHashes repo = do
+  branches <- Git.remoteBranches repo
+
+  let branch_hashes = S.for (S.each branches) $ \branch -> do
+        hash <- S.lift (Git.revParse repo branch)
+        S.yield (branch, hash)
+
+  bhm_ S.:> _ <- S.toList branch_hashes
+
+  return bhm_
 
 remoteBranches :: Repo -> IO [Branch]
 remoteBranches (Repo repo) = do
