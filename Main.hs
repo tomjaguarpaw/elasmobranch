@@ -62,6 +62,17 @@ doRepo mmap statusTyped repoPath = do
     Left err   -> return (S.yield ("Couldn't clone " ++ repoPath))
     Right repo -> doRepoSuccess mmap statusTyped repo
 
+doRepoSuccess :: ((Git.Repo
+                   -> (Git.Hash, Git.Hash)
+                   -> IO (Either (Git.RebaseStatus, Git.MergeStatus) Ordering))
+              -> (Status -> IO a)
+              -> Git.Repo
+              -> IO (S.Stream (S.Of String) IO ()))
+doRepoSuccess mmap statusTyped repo = do
+  bhm_ <- Git.originBranchHashes repo
+  t <- branchPairsFromHashes mmap statusTyped repo bhm_
+  produceTable t
+
 branchPairsFromHashes :: Ord branch
                       => (Git.Repo -> (Git.Hash, Git.Hash) -> IO r)
                       -> (Status -> IO a)
@@ -142,17 +153,6 @@ color = let
  (Right Data.Ord.GT)  -> grey
  (Right Data.Ord.LT)  -> green
  (Right Data.Ord.EQ)  -> white
-
-doRepoSuccess :: ((Git.Repo
-                   -> (Git.Hash, Git.Hash)
-                   -> IO (Either (Git.RebaseStatus, Git.MergeStatus) Ordering))
-              -> (Status -> IO a)
-              -> Git.Repo
-              -> IO (S.Stream (S.Of String) IO ()))
-doRepoSuccess mmap statusTyped repo = do
-  bhm_ <- Git.originBranchHashes repo
-  t <- branchPairsFromHashes mmap statusTyped repo bhm_
-  produceTable t
 
 produceTable :: ([Git.Branch],
                  Data.Map.Map
