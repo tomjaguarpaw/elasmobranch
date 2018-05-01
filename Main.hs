@@ -55,18 +55,7 @@ doRepo mmap statusTyped repoPath = do
     Left err   -> return (S.yield ("Couldn't clone " ++ repoPath))
     Right repo -> doRepoSuccess mmap statusTyped repo
 
-branchPairs :: (Git.Repo -> (Git.Hash, Git.Hash) -> IO r)
-            -> (Status -> IO a)
-            -> Git.Repo
-            -> IO ([Git.Branch], Data.Map.Map (Git.Branch, Git.Branch) r)
-branchPairs checkit emitStatus repo = do
-  branches <- Git.remoteBranches repo
-
-  let branch_hashes = S.for (S.each branches) $ \branch -> do
-        hash <- S.lift (Git.revParse repo branch)
-        S.yield (branch, hash)
-
-  bhm_ S.:> _ <- S.toList branch_hashes
+branchPairsFromHashes checkit emitStatus repo bhm_ = do
   let bhm = S.each bhm_
 
   let branchpairs :: S.Stream (S.Of _) IO ()
@@ -88,7 +77,22 @@ branchPairs checkit emitStatus repo = do
 
   let d = Data.Map.fromList l
 
-  return (branches, d)
+  return (map fst bhm_, d)
+
+branchPairs :: (Git.Repo -> (Git.Hash, Git.Hash) -> IO r)
+            -> (Status -> IO a)
+            -> Git.Repo
+            -> IO ([Git.Branch], Data.Map.Map (Git.Branch, Git.Branch) r)
+branchPairs checkit emitStatus repo = do
+  branches <- Git.remoteBranches repo
+
+  let branch_hashes = S.for (S.each branches) $ \branch -> do
+        hash <- S.lift (Git.revParse repo branch)
+        S.yield (branch, hash)
+
+  bhm_ S.:> _ <- S.toList branch_hashes
+
+  branchPairsFromHashes checkit emitStatus repo bhm_
 
 key :: Table String TableCell
 key = Table statusString
