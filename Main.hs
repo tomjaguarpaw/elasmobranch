@@ -142,8 +142,10 @@ doRepoSuccess :: ((Git.Repo
               -> (Status -> IO a)
               -> Git.Repo
               -> IO (S.Stream (S.Of String) IO ()))
-doRepoSuccess mmap statusTyped repo =
-  produceTable =<< branchPairs mmap statusTyped repo
+doRepoSuccess mmap statusTyped repo = do
+  bhm_ <- Git.originBranchHashes repo
+  t <- branchPairsFromHashes mmap statusTyped repo bhm_
+  produceTable t
 
 produceTable :: ([Git.Branch],
                  Data.Map.Map
