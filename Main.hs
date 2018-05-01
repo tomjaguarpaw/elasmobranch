@@ -85,11 +85,8 @@ branchPairsFromHashes checkit emitStatus repo bhm_ = do
 
   return (map fst bhm_, d)
 
-branchPairs :: (Git.Repo -> (Git.Hash, Git.Hash) -> IO r)
-            -> (Status -> IO a)
-            -> Git.Repo
-            -> IO ([Git.Branch], Data.Map.Map (Git.Branch, Git.Branch) r)
-branchPairs checkit emitStatus repo = do
+originBranchHashes :: Git.Repo -> IO [(Git.Branch, Git.Hash)]
+originBranchHashes repo = do
   branches <- Git.remoteBranches repo
 
   let branch_hashes = S.for (S.each branches) $ \branch -> do
@@ -98,6 +95,14 @@ branchPairs checkit emitStatus repo = do
 
   bhm_ S.:> _ <- S.toList branch_hashes
 
+  return bhm_
+
+branchPairs :: (Git.Repo -> (Git.Hash, Git.Hash) -> IO r)
+            -> (Status -> IO a)
+            -> Git.Repo
+            -> IO ([Git.Branch], Data.Map.Map (Git.Branch, Git.Branch) r)
+branchPairs checkit emitStatus repo = do
+  bhm_ <- originBranchHashes repo
   branchPairsFromHashes checkit emitStatus repo bhm_
 
 key :: Table String TableCell
