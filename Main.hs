@@ -55,6 +55,11 @@ doRepo mmap statusTyped repoPath = do
     Left err   -> return (S.yield ("Couldn't clone " ++ repoPath))
     Right repo -> doRepoSuccess mmap statusTyped repo
 
+branchPairsFromHashes :: (Git.Repo -> (Git.Hash, Git.Hash) -> IO r)
+                      -> (Status -> IO a)
+                      -> Git.Repo
+                      -> [(Git.Branch, Git.Hash)]
+                      -> IO ([Git.Branch], Data.Map.Map (Git.Branch, Git.Branch) r)
 branchPairsFromHashes checkit emitStatus repo bhm_ = do
   let bhm = S.each bhm_
 
