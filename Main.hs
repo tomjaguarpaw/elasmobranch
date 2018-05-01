@@ -50,9 +50,10 @@ tableToHtml (Table fleft ftop lefts tops m) = do
         table s = S.yield "<table>" >> s >> S.yield "</table>"
 
 type CompareHashes r = Git.Repo -> (Git.Hash, Git.Hash) -> IO r
+type CompareHashes' =
+  CompareHashes (Either (Git.RebaseStatus, Git.MergeStatus) Ordering)
 
-doRepo :: CompareHashes (Either (Git.RebaseStatus, Git.MergeStatus)
-                                Ordering)
+doRepo :: CompareHashes'
        -> (Status -> IO a)
        -> String
        -> IO (S.Stream (S.Of String) IO ())
@@ -62,8 +63,7 @@ doRepo mmap statusTyped repoPath = do
     Left err   -> return (S.yield ("Couldn't clone " ++ repoPath))
     Right repo -> doRepoSuccess mmap statusTyped repo
 
-doRepoSuccess :: CompareHashes (Either (Git.RebaseStatus, Git.MergeStatus)
-                                       Ordering)
+doRepoSuccess :: CompareHashes'
               -> (Status -> IO a)
               -> Git.Repo
               -> IO (S.Stream (S.Of String) IO ())
@@ -236,8 +236,7 @@ statusMessage = \case
   CompletedRebasing n total -> show n ++ "/" ++ show total ++ " rebases done"
   Cloning -> "I am cloning the repo"
 
-doRepoMatrix :: (CompareHashes (Either (Git.RebaseStatus, Git.MergeStatus)
-                                       Ordering))
+doRepoMatrix :: CompareHashes'
              -> (Status -> IO a)
              -> String
              -> IO String
@@ -248,8 +247,7 @@ doRepoMatrix mmap statusTyped path = do
 
     return htmlString
 
-doRepoString :: (CompareHashes (Either (Git.RebaseStatus, Git.MergeStatus)
-                                       Ordering))
+doRepoString :: CompareHashes'
              -> (Control.Concurrent.ThreadId -> Either Status String -> IO ())
              -> String
              -> IO String
@@ -306,8 +304,7 @@ main = do
   mmap <- Data.IORef.newIORef Data.Map.empty
   tmap <- Data.IORef.newIORef Data.Map.empty
 
-  let checkit :: CompareHashes (Either (Git.RebaseStatus, Git.MergeStatus)
-                                       Ordering)
+  let checkit :: CompareHashes'
       checkit = memoize mmap . uncurry . Git.status
 
   let sendStatus_ = sendStatus tmap
