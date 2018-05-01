@@ -241,6 +241,7 @@ readStatus :: Ord threadId
            -> IO (Maybe status)
 readStatus tmap threadId = fmap (Data.Map.lookup threadId) (Data.IORef.readIORef tmap)
 
+statusMessage :: Status -> String
 statusMessage = \case
   CompletedRebasing n total -> show n ++ "/" ++ show total ++ " rebases done"
   Cloning -> "I am cloning the repo"
