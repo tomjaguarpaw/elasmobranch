@@ -327,6 +327,7 @@ mainLocal = do
   args <- System.Environment.getArgs
 
   let repo = args !! 0
+      outfile = args !! 1
 
   branches <- Git.remoteBranches (Git.Repo repo)
 
@@ -344,7 +345,7 @@ mainLocal = do
 
   html <- doRepoMatrix (\r -> uncurry (Git.status r)) (\r -> print r >> System.IO.hFlush System.IO.stdout) repo
 
-  writeFile (args !! 1) html
+  writeFile outfile html
 
 mainCommandLine :: IO ()
 mainCommandLine = do
