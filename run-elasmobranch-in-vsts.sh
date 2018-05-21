@@ -25,7 +25,7 @@ verified_download() {
 ARTIFACT_DIRECTORY=Elasmobranch
 
 mkdir -p $ARTIFACT_DIRECTORY
-verified_download 'https://github.com/tomjaguarpaw/elasmobranch/raw/145e7e4bcf6044a140e2c815fe4bd216d5247420/matrix2' matrix 45f1e4175b87020f0315aad9f5e2354b0d4dd3acb93bb057f23b8011f9320fcf
+verified_download 'https://raw.githubusercontent.com/tomjaguarpaw/elasmobranch/145e7e4bcf6044a140e2c815fe4bd216d5247420/matrix2' matrix 45f1e4175b87020f0315aad9f5e2354b0d4dd3acb93bb057f23b8011f9320fcf
 chmod +x matrix
 ./matrix . $ARTIFACT_DIRECTORY/elasmobranch.html
 
