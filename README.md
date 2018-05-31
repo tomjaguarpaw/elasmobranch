@@ -61,6 +61,13 @@ find it:
 * Click "..." on the right hand  side of "elasmobranch.html"
 * Then you can "Download" or "Copy download url"
 
+### Windows build not currently supported
+
+There is currently no precompiled binary for Windows.  If necessary we can
+provide one.  There's no real additional value having a Windows binary
+because the results under a Windows build will be exactly the same as under
+a Linux build.
+
 ## Known issues
 
 If you have any difficulties with Elasmobranch or have any questions
