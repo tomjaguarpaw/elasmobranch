@@ -81,3 +81,10 @@ following issues are known:
 
 * The report has "Submit another repo" links that don't (and
   shouldn't) work.  They'll be removed in a future version.
+
+* There is no key for the colours in the table cells.
+
+* There are no tooltips for the table cells.
+
+* The three-letter abbreviations don't work well with username-prefixed
+  branches.
