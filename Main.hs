@@ -224,20 +224,16 @@ produceTable (branches, d) = do
               S.yield (li (warningSymbol, message (Git.branchName branch)))
         S.yield "</ul>"
 
-      html = do
-        S.yield "<html>"
-        S.yield "<head><title>elasmobranch</title></head>"
-        S.yield "<body>"
+      tag s x = S.yield ("<" ++ s ++ ">") >> x >> S.yield ("</" ++ s ++ ">")
+
+      html = tag "html" $ do
+        tag "head" (tag "title" (S.yield "elasmobranch"))
+        tag "body" $ do
+          S.yield submitAnother
+          ulOfWarnings
+          tag "p" (tableToHtml table)
+          tag "p" (tableToHtml tableKey)
         S.yield submitAnother
-        ulOfWarnings
-        S.yield "<p>"
-        tableToHtml table
-        S.yield "</p>"
-        S.yield "<p>"
-        tableToHtml tableKey
-        S.yield "</p>"
-        S.yield submitAnother
-        S.yield "</body></html>"
 
   return html
 
