@@ -335,7 +335,10 @@ mainLocal = do
 
   let originBranchHashes _ = Git.originBranchHashes (Git.Repo repo)
 
-  html <- doRepoMatrix originBranchHashes (\r -> uncurry (Git.status r)) (\r -> print r >> System.IO.hFlush System.IO.stdout) repo
+  html <- doRepoMatrix originBranchHashes
+                       (\r -> uncurry (Git.status r))
+                       (\r -> print r >> System.IO.hFlush System.IO.stdout)
+                       repo
 
   writeFile outfile html
 
