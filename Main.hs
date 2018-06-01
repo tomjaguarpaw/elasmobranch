@@ -249,16 +249,6 @@ statusMessage = \case
   CompletedRebasing n total -> show n ++ "/" ++ show total ++ " rebases done"
   Cloning -> "I am cloning the repo"
 
-doRepoMatrix :: _
-             -> CompareHashes'
-             -> (Status -> IO a)
-             -> String
-             -> IO String
-doRepoMatrix originBranchHashes mmap statusTyped path = do
-    html <- doRepo originBranchHashes mmap statusTyped path
-    l <- S.toList_ html
-    return (concat l)
-
 doRepoString :: CompareHashes'
              -> (Control.Concurrent.ThreadId -> Either Status String -> IO ())
              -> String
@@ -270,9 +260,10 @@ doRepoString mmap sendStatustmap path = do
     let status = sendStatustmap myThreadId
         statusTyped = status . Left
 
-    htmlString <- doRepoMatrix Git.originBranchHashes mmap statusTyped path
+    htmlStrings <- doRepo Git.originBranchHashes mmap statusTyped path
+    htmlStringsList <- S.toList_ htmlStrings
 
-    status (Right htmlString)
+    status (Right (concat htmlStringsList))
 
   return ("<html><head><title>elasmobranch: Link to your report</title></head>"
           ++ "<body>"
