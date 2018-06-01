@@ -159,8 +159,7 @@ simpleColorToHtml = \case
   Grey   -> "#cccccc"
   White  -> "#ffffff"
 
-color :: CompareResult
-      -> String
+color :: CompareResult -> String
 color = simpleColorToHtml . \case
  Left (Git.Conflicts, Git.MConflicts) -> Red
  Left (Git.Conflicts, Git.MClean)     -> Orange
