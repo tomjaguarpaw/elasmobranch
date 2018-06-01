@@ -50,8 +50,8 @@ tableToHtml (Table fleft ftop lefts tops m) = do
         table s = S.yield "<table>" >> s >> S.yield "</table>"
 
 type CompareHashes r = Git.Repo -> (Git.Hash, Git.Hash) -> IO r
-type CompareHashes' =
-  CompareHashes (Either (Git.RebaseStatus, Git.MergeStatus) Ordering)
+type CompareHashes' = CompareHashes CompareResult
+type CompareResult = Either (Git.RebaseStatus, Git.MergeStatus) Ordering
 
 doRepo :: CompareHashes'
        -> (Status -> IO a)
@@ -118,12 +118,12 @@ tableKey = Table statusString
                  (Data.Map.fromList
                    (map (\s -> ((s, ()), TableCell (color s) "&nbsp; "))
                         allOfThem))
-  where allOfThem :: [Either (Git.RebaseStatus, Git.MergeStatus) Ordering]
+  where allOfThem :: [CompareResult]
         allOfThem = ((Left <$> ((,) <$> [minBound..maxBound]
                                     <*> [minBound..maxBound]))
                      ++ map Right [minBound..maxBound])
 
-statusString :: Either (Git.RebaseStatus, Git.MergeStatus) Ordering
+statusString :: CompareResult
              -> String
 statusString = \case
   Left (Git.Conflicts, Git.MConflicts) -> "Merge and rebase conflict"
@@ -134,7 +134,7 @@ statusString = \case
   Right Data.Ord.LT  -> "Ahead of"
   Right Data.Ord.EQ  -> "Equal to"
 
-color :: Either (Git.RebaseStatus, Git.MergeStatus) Ordering
+color :: CompareResult
       -> String
 color = let
   red    = "#ff0000"
@@ -153,7 +153,7 @@ color = let
  Right Data.Ord.LT  -> green
  Right Data.Ord.EQ  -> white
 
-warning :: Either (Git.RebaseStatus, Git.MergeStatus) Ordering
+warning :: CompareResult
         -> Maybe (String, String -> String)
 warning = let
   wastebasket  = "&#x1f5d1;"
@@ -177,9 +177,7 @@ warning = let
                          ++ " and rebases cleanly onto master"))
 
 produceTable :: ([Git.Branch],
-                 Data.Map.Map
-                   (Git.Branch, Git.Branch)
-                   (Either (Git.RebaseStatus, Git.MergeStatus) Ordering))
+                 Data.Map.Map (Git.Branch, Git.Branch) CompareResult)
              -> IO (S.Stream (S.Of String) IO ())
 produceTable (branches, d) = do
   let tc x = TableCell (color x) "&nbsp;"
