@@ -337,6 +337,8 @@ mainLocal = do
   -- this information, making it look like all branches are
   -- incompatible.  Perhaps this should be moved into the merge and
   -- rebase commands themselves.
+  --
+  -- FIXME: This really shouldn't be global!
   Git.proc "git" ["config", "--global", "user.email", "elasmobranch@example.com"] (Just repo)
   Git.proc "git" ["config", "--global", "user.name", "Elasmobranch"] (Just repo)
 
