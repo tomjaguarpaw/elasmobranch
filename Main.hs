@@ -330,8 +330,10 @@ mainLocal :: IO ()
 mainLocal = do
   args <- System.Environment.getArgs
 
-  let repo = args !! 0
-      outfile = args !! 1
+  let (repo, outfile) = case args of
+        [repo, outfile] -> (repo, outfile)
+        _               ->
+          error "Need two args: repo to clone and file to write to"
 
   let originBranchHashes _ = Git.originBranchHashes (Git.Repo repo)
 
