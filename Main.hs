@@ -153,17 +153,36 @@ color = let
  Right Data.Ord.LT  -> green
  Right Data.Ord.EQ  -> white
 
+warning :: Either (Git.RebaseStatus, Git.MergeStatus) Ordering
+        -> Maybe (String, String -> String)
+warning = let
+  wastebasket  = "&#x1f5d1;"
+  cross_mark   = "&#x274c;"
+  warning_sign = "&#x26a0;"
+  in \case
+  Right Data.Ord.GT ->
+    Just (wastebasket, (++ " is behind master"))
+  Right Data.Ord.EQ -> Nothing
+  Right Data.Ord.LT -> Nothing
+  Left (Git.Conflicts, Git.MConflicts) ->
+    Just (cross_mark, (++ " conflicts with master"))
+  Left (Git.Clean, Git.MConflicts) ->
+    Just (cross_mark, (++ " rebases cleanly on master"
+                       ++ " but does not merge"))
+  Left (Git.Conflicts, Git.MClean) ->
+    Just (cross_mark, (++ " merges cleanly into master"
+                       ++ " but does not rebase"))
+  Left (Git.Clean, Git.MClean) ->
+    Just (warning_sign, (++ " merges cleanly into"
+                         ++ " and rebases cleanly onto master"))
+
 produceTable :: ([Git.Branch],
                  Data.Map.Map
                    (Git.Branch, Git.Branch)
                    (Either (Git.RebaseStatus, Git.MergeStatus) Ordering))
              -> IO (S.Stream (S.Of String) IO ())
 produceTable (branches, d) = do
-  let wastebasket  = "&#x1f5d1;"
-      cross_mark   = "&#x274c;"
-      warning_sign = "&#x26a0;"
-
-      tc x = TableCell (color x) "&nbsp;"
+  let tc x = TableCell (color x) "&nbsp;"
 
       table = Table (drop 7 . Git.branchName)
                     (take 3 . drop 7 . Git.branchName)
@@ -183,26 +202,8 @@ produceTable (branches, d) = do
           in case Data.Map.lookup key d of
             Nothing -> error ("Couldn't find key " ++ show key ++ " in "
                               ++ show (Data.Map.keys d))
-            Just r  -> traverse (S.yield . li) $ case r of
-              Right Data.Ord.GT ->
-                Just (wastebasket, Git.branchName branch ++ " is behind master")
-              Right Data.Ord.EQ -> Nothing
-              Right Data.Ord.LT -> Nothing
-              Left (Git.Conflicts, Git.MConflicts) ->
-                Just (cross_mark, Git.branchName branch
-                                  ++ " conflicts with master")
-              Left (Git.Clean, Git.MConflicts) ->
-                Just (cross_mark, Git.branchName branch
-                                    ++ " rebases cleanly on master"
-                                    ++ " but does not merge")
-              Left (Git.Conflicts, Git.MClean) ->
-                Just (cross_mark, Git.branchName branch
-                                    ++ " merges cleanly into master"
-                                    ++ " but does not rebase")
-              Left (Git.Clean, Git.MClean) ->
-                Just (warning_sign, Git.branchName branch
-                                    ++ " merges cleanly into"
-                                    ++ " and rebases cleanly onto master")
+            Just r  -> S.for (S.each (warning r)) $ \(warningSymbol, message) ->
+              S.yield (li (warningSymbol, message (Git.branchName branch)))
         S.yield "</ul>"
 
       html = do
