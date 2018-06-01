@@ -245,8 +245,8 @@ compareHash repo hash1 hash2 = do
   where isAncestorOf_ = isAncestorOf repo
 
 
-data RebaseStatus = Conflicts | Clean deriving Show
-data MergeStatus = MConflicts | MClean deriving Show
+data RebaseStatus = Conflicts | Clean deriving (Show, Eq, Ord, Bounded, Enum)
+data MergeStatus = MConflicts | MClean deriving (Show, Eq, Ord, Bounded, Enum)
 
 -- Test
 
