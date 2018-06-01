@@ -26,6 +26,12 @@ data TableCell = TableCell { tcColor  :: String
 
 emptyTableCell x = TableCell (color x) "&nbsp;"
 
+tag :: Monad m
+    => String
+    -> S.Stream (S.Of String) m a
+    -> S.Stream (S.Of String) m ()
+tag s x = S.yield ("<" ++ s ++ ">") >> x >> S.yield ("</" ++ s ++ ">")
+
 tableToHtml :: Monad m
             => Table String TableCell
             -> S.Stream (S.Of String) m ()
@@ -45,11 +51,11 @@ tableToHtml (Table fleft ftop lefts tops m) = do
                   Just tc  -> cell tc
                   Nothing -> error (show (top, left))
 
-  where row s = S.yield "<tr>" >> s >> S.yield "</tr>"
+  where row = tag "tr"
         cell tc = S.yield ("<td style='background-color: "
                             ++ tcColor tc ++ "; text-align: right'>"
                             ++ tcString tc ++ "</td>")
-        table s = S.yield "<table>" >> s >> S.yield "</table>"
+        table = tag "table"
 
 type CompareHashes r = Git.Repo -> (Git.Hash, Git.Hash) -> IO r
 type CompareHashes' = CompareHashes CompareResult
@@ -223,8 +229,6 @@ produceTable (branches, d) = do
             Just r  -> S.for (S.each (warning r)) $ \(warningSymbol, message) ->
               S.yield (li (warningSymbol, message (Git.branchName branch)))
         S.yield "</ul>"
-
-      tag s x = S.yield ("<" ++ s ++ ">") >> x >> S.yield ("</" ++ s ++ ">")
 
       html = tag "html" $ do
         tag "head" (tag "title" (S.yield "elasmobranch"))
