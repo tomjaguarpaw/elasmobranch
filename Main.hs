@@ -361,29 +361,43 @@ mainCommandLine = do
   putStrLn "Don't worry!  We'll get out of this situation."
   putStrLn ""
 
-  let directory = case args of
+  let directory :: Either String FilePath
+      directory = case args of
         []    -> return  "."
         [dir] -> return dir
         _     -> Left ("Give me zero arguments, or one argument which is the "
                        ++ "directory of the git repo in question")
 
-  situation <- traverse Git.repoAtDirectory directory
+  inProgress <- traverse what'sInProgressAtFilePath directory
+  let _ = inProgress :: Either String (Maybe (Maybe (Maybe Git.InProgress)))
 
-  case situation of
-    Right mRepo -> do
-      case mRepo of
-       Nothing   -> putStrLn "There's no git repo there"
-       Just (Git.RADRepo _) -> putStrLn "It's a clean repo!"
-       Just (Git.RADRepoDirty repo) -> do
-         wip <- Git.what'sInProgress repo
-         putStrLn $ case wip of
-           Nothing ->
-             "I guess you've got some normal changes.\n"
-             ++ "I don't see anything wrong here\n"
-             ++ "and I'm not trained to help you further."
-           Just ip -> inProgressMessage ip
+  putStrLn $ case inProgress of
+    Right x  -> radMessage x
+    Left err -> err
 
-    Left err -> putStrLn err
+what'sInProgressAtFilePath
+  :: FilePath
+  -> IO (Maybe (Maybe (Maybe Git.InProgress)))
+what'sInProgressAtFilePath filepath = do
+  mRepo <- Git.repoAtDirectory filepath
+  traverse what'sInProgress mRepo
+  where what'sInProgress :: Git.RepoAtDirectory
+                         -> IO (Maybe (Maybe Git.InProgress))
+        what'sInProgress = \case
+          Git.RADRepo _         -> return Nothing
+          Git.RADRepoDirty repo -> do
+            wip <- Git.what'sInProgress repo
+            return (Just wip)
+
+radMessage :: Maybe (Maybe (Maybe Git.InProgress)) -> String
+radMessage = \case
+  Nothing               -> "There's no git repo there"
+  Just Nothing          -> "It's a clean repo!"
+  Just (Just Nothing)   ->
+    "I guess you've got some normal changes.\n"
+    ++ "I don't see anything wrong here\n"
+    ++ "and I'm not trained to help you further."
+  Just (Just (Just ip)) -> inProgressMessage ip
 
 inProgressMessage :: Git.InProgress -> String
 inProgressMessage = \case
