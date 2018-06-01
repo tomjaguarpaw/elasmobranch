@@ -58,19 +58,19 @@ doRepo :: _
        -> (Status -> IO a)
        -> String
        -> IO (S.Stream (S.Of String) IO ())
-doRepo originBranchHashes_ mmap statusTyped repoPath = do
+doRepo originBranchHashes mmap statusTyped repoPath = do
   statusTyped Cloning
   Git.withClone repoPath $ \result -> case result of
     Left err   -> return (S.yield ("Couldn't clone " ++ repoPath))
-    Right repo -> doRepoSuccess originBranchHashes_ mmap statusTyped repo
+    Right repo -> doRepoSuccess originBranchHashes mmap statusTyped repo
 
 doRepoSuccess :: _
               -> CompareHashes'
               -> (Status -> IO a)
               -> Git.Repo
               -> IO (S.Stream (S.Of String) IO ())
-doRepoSuccess originBranchHashes_ mmap statusTyped repo = do
-  bhm_ <- originBranchHashes_ repo
+doRepoSuccess originBranchHashes mmap statusTyped repo = do
+  bhm_ <- originBranchHashes repo
   t <- branchPairsFromHashes mmap statusTyped repo bhm_
   produceTable t
 
@@ -254,8 +254,8 @@ doRepoMatrix :: _
              -> (Status -> IO a)
              -> String
              -> IO String
-doRepoMatrix originBranchHashes_ mmap statusTyped path = do
-    html <- doRepo originBranchHashes_ mmap statusTyped path
+doRepoMatrix originBranchHashes mmap statusTyped path = do
+    html <- doRepo originBranchHashes mmap statusTyped path
     l <- S.toList_ html
     let htmlString = concat l
 
@@ -333,9 +333,9 @@ mainLocal = do
   let repo = args !! 0
       outfile = args !! 1
 
-  let originBranchHashes_ _ = Git.originBranchHashes (Git.Repo repo)
+  let originBranchHashes _ = Git.originBranchHashes (Git.Repo repo)
 
-  html <- doRepoMatrix originBranchHashes_ (\r -> uncurry (Git.status r)) (\r -> print r >> System.IO.hFlush System.IO.stdout) repo
+  html <- doRepoMatrix originBranchHashes (\r -> uncurry (Git.status r)) (\r -> print r >> System.IO.hFlush System.IO.stdout) repo
 
   writeFile outfile html
 
