@@ -183,6 +183,7 @@ produceTable :: ([Git.Branch],
              -> IO (S.Stream (S.Of String) IO ())
 produceTable (branches, d) = do
   let tc x = TableCell (color x) "&nbsp;"
+      master = Git.Branch "origin/master"
 
       table = Table (drop 7 . Git.branchName)
                     (take 3 . drop 7 . Git.branchName)
@@ -190,13 +191,12 @@ produceTable (branches, d) = do
                     branchesWithMasterFirst
                     (fmap tc d)
         where branchesWithMasterFirst = master:branchesNotMaster
-              master = Git.Branch "origin/master"
               branchesNotMaster = filter (/= master) branches
 
       ulOfWarnings = do
         S.yield "<ul>"
         S.for (S.each branches) $ \branch ->
-          let key = (branch, Git.Branch "origin/master")
+          let key = (branch, master)
               li (sym, s) = "<li>" ++ sym ++ " &mdash; " ++ s ++ "</li>"
 
           in case Data.Map.lookup key d of
