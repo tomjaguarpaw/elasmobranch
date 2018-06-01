@@ -136,8 +136,7 @@ what'sInProgress (RepoDirty dir) = do
                                               ++ show a)
 
   case ((mergeHeadExists, mergeModeExists, mergeMsgExists),
-                 rebaseApplyExists,
-                 cherryPickHeadExists) of
+         rebaseApplyExists, cherryPickHeadExists) of
    ((True,  True,  True),  False, False) -> return (Just IPMerge)
    ((False, False, False), True,  False) -> return (Just IPRebase)
    ((False, False, True),  False, True)  -> return (Just IPCherryPick)
