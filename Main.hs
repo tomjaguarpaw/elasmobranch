@@ -337,10 +337,13 @@ mainLocal = do
 
   let originBranchHashes _ = Git.originBranchHashes (Git.Repo repo)
 
-  html <- doRepoMatrix originBranchHashes
-                       (\r -> uncurry (Git.status r))
-                       (\r -> print r >> System.IO.hFlush System.IO.stdout)
-                       repo
+  html <- doRepo originBranchHashes
+                 (\r -> uncurry (Git.status r))
+                 (\r -> print r >> System.IO.hFlush System.IO.stdout)
+                 repo
+
+  let writeFile :: FilePath -> S.Stream (S.Of String) IO r -> IO r
+      writeFile f = System.IO.withFile f System.IO.WriteMode . flip S.toHandle
 
   writeFile outfile html
 
