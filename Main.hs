@@ -24,6 +24,7 @@ data TableCell = TableCell { tcColor  :: String
                            , tcString :: String
                            }
 
+emptyTableCell :: CompareResult -> TableCell
 emptyTableCell x = TableCell (color x) "&nbsp;"
 
 tag :: Monad m
