@@ -120,11 +120,14 @@ tableKey = Table statusString
                         allOfThem))
   where allOfThem :: [CompareResult]
         allOfThem = S.runIdentity $ S.toList_ $ do
-          S.for (S.each [minBound..maxBound]) $ \i ->
-            S.for (S.each [minBound..maxBound]) $ \j ->
+          S.for streamAll $ \i ->
+            S.for streamAll $ \j ->
               S.yield (Left (i, j))
-          S.for (S.each [minBound..maxBound]) $ \i ->
+          S.for streamAll $ \i ->
             S.yield (Right i)
+
+        streamAll :: (Monad m, Bounded a, Enum a) => S.Stream (S.Of a) m ()
+        streamAll = S.each [minBound..maxBound]
 
 statusString :: CompareResult -> String
 statusString = \case
