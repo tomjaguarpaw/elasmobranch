@@ -79,6 +79,14 @@ withClone repo f = do
                                      ]
                             Nothing
                             env
+    -- We don't actually care about to whom to attribute patches when
+    -- git does a rebase or a merge but it seems that it can die without
+    -- this information, making it look like all branches are
+    -- incompatible.  Perhaps this should be moved into the merge and
+    -- rebase commands themselves.
+    Git.proc "git" ["config", "user.email", "elasmobranch@example.com"] (Just temp)
+    Git.proc "git" ["config", "user.name", "Elasmobranch"] (Just temp)
+
     case exitCode of
       System.Exit.ExitFailure _ -> f (Left err)
       System.Exit.ExitSuccess   -> f (Right (Repo temp))

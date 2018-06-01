@@ -332,16 +332,6 @@ mainLocal = do
 
   branches <- Git.remoteBranches (Git.Repo repo)
 
-  -- We don't actually care about to whom to attribute patches when
-  -- git does a rebase or a merge but it seems that it can die without
-  -- this information, making it look like all branches are
-  -- incompatible.  Perhaps this should be moved into the merge and
-  -- rebase commands themselves.
-  --
-  -- FIXME: This really shouldn't be global!
-  Git.proc "git" ["config", "--global", "user.email", "elasmobranch@example.com"] (Just repo)
-  Git.proc "git" ["config", "--global", "user.name", "Elasmobranch"] (Just repo)
-
   -- This is a big hack
   flip mapM_ branches $ \(Git.Branch branch) ->
     Git.proc "git" ["checkout", drop 7 branch] (Just repo)
