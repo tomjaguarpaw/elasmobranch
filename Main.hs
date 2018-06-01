@@ -377,8 +377,8 @@ mainCommandLine = do
          wip <- Git.what'sInProgress repo
          putStrLn $ case wip of
            Nothing ->
-             "I guess you've got some normal changes. "
-             ++ "I don't see anything wrong here "
+             "I guess you've got some normal changes.\n"
+             ++ "I don't see anything wrong here\n"
              ++ "and I'm not trained to help you further."
            Just ip -> inProgressMessage ip
 
@@ -393,14 +393,14 @@ inProgressMessage = \case
    "You're in a merge conflict. If you want to abort it do\n\n"
     ++ "    git merge --abort"
   Git.IPStashPop ->
-    "In a stash pop conflict. If you want to abort it try\n\n"
+    "You're in a stash pop conflict. If you want to abort it try\n\n"
     ++ "    git reset --merge\n\nIf that doesn't work then do\n\n"
     ++ "    git reset HEAD\n\nand then to remove the popped changes "
     ++ "from your working copy do\n\n    git checkout --patch\n\n"
-    ++ "(The popped changes still exist in the stash)\n\n"
-    ++ "If you have resolved the conflict and want to continue working without "
-    ++ "committing these changes then 'git reset HEAD' is also the correct "
-    ++ "thing to do."
+    ++ "(The popped changes still exist in the stash)\n"
+    ++ "If you have resolved the conflict and want to continue working\n"
+    ++ "without committing these changes then 'git reset HEAD' is also\n"
+    ++ "the correct thing to do."
   Git.IPCherryPick ->
     "You're in a cherry-pick conflict. If you want to abort it do\n\n"
     ++ "    git cherry-pick --abort"
