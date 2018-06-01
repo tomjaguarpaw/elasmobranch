@@ -53,22 +53,24 @@ type CompareHashes r = Git.Repo -> (Git.Hash, Git.Hash) -> IO r
 type CompareHashes' = CompareHashes CompareResult
 type CompareResult = Either (Git.RebaseStatus, Git.MergeStatus) Ordering
 
-doRepo :: CompareHashes'
+doRepo :: _
+       -> CompareHashes'
        -> (Status -> IO a)
        -> String
        -> IO (S.Stream (S.Of String) IO ())
-doRepo mmap statusTyped repoPath = do
+doRepo originBranchHashes_ mmap statusTyped repoPath = do
   statusTyped Cloning
   Git.withClone repoPath $ \result -> case result of
     Left err   -> return (S.yield ("Couldn't clone " ++ repoPath))
-    Right repo -> doRepoSuccess mmap statusTyped repo
+    Right repo -> doRepoSuccess originBranchHashes_ mmap statusTyped repo
 
-doRepoSuccess :: CompareHashes'
+doRepoSuccess :: _
+              -> CompareHashes'
               -> (Status -> IO a)
               -> Git.Repo
               -> IO (S.Stream (S.Of String) IO ())
-doRepoSuccess mmap statusTyped repo = do
-  bhm_ <- Git.originBranchHashes repo
+doRepoSuccess originBranchHashes_ mmap statusTyped repo = do
+  bhm_ <- originBranchHashes_ repo
   t <- branchPairsFromHashes mmap statusTyped repo bhm_
   produceTable t
 
@@ -247,12 +249,13 @@ statusMessage = \case
   CompletedRebasing n total -> show n ++ "/" ++ show total ++ " rebases done"
   Cloning -> "I am cloning the repo"
 
-doRepoMatrix :: CompareHashes'
+doRepoMatrix :: _
+             -> CompareHashes'
              -> (Status -> IO a)
              -> String
              -> IO String
-doRepoMatrix mmap statusTyped path = do
-    html <- doRepo mmap statusTyped path
+doRepoMatrix originBranchHashes_ mmap statusTyped path = do
+    html <- doRepo originBranchHashes_ mmap statusTyped path
     l <- S.toList_ html
     let htmlString = concat l
 
@@ -269,7 +272,7 @@ doRepoString mmap sendStatustmap path = do
     let status = sendStatustmap myThreadId
         statusTyped = status . Left
 
-    htmlString <- doRepoMatrix mmap statusTyped path
+    htmlString <- doRepoMatrix Git.originBranchHashes mmap statusTyped path
 
     status (Right htmlString)
 
@@ -336,7 +339,7 @@ mainLocal = do
   flip mapM_ branches $ \(Git.Branch branch) ->
     Git.proc "git" ["checkout", drop 7 branch] (Just repo)
 
-  html <- doRepoMatrix (\r -> uncurry (Git.status r)) (\r -> print r >> System.IO.hFlush System.IO.stdout) repo
+  html <- doRepoMatrix Git.originBranchHashes (\r -> uncurry (Git.status r)) (\r -> print r >> System.IO.hFlush System.IO.stdout) repo
 
   writeFile outfile html
 
