@@ -90,6 +90,25 @@ branchPairs checkit emitStatus repo = do
 
   return (branches, d)
 
+color :: Either (Git.RebaseStatus, Git.MergeStatus) Ordering
+      -> String
+color = let
+  red    = "#ff0000"
+  orange = "#ffcc00"
+  yellow = "#ccff00"
+  green  = "#00ff00"
+  grey   = "#cccccc"
+  white  = "#ffffff"
+  in \case
+ (Left (Git.Conflicts, Git.MConflicts)) -> red
+ (Left (Git.Conflicts, Git.MClean))     -> orange
+ (Left (Git.Clean, Git.MConflicts))     -> orange
+ (Left (Git.Clean, Git.MClean))         -> yellow
+
+ (Right Data.Ord.GT)  -> grey
+ (Right Data.Ord.LT)  -> green
+ (Right Data.Ord.EQ)  -> white
+
 doRepoSuccess :: ((Git.Repo
                    -> (Git.Hash, Git.Hash)
                    -> IO (Either (Git.RebaseStatus, Git.MergeStatus) Ordering))
@@ -99,25 +118,11 @@ doRepoSuccess :: ((Git.Repo
 doRepoSuccess mmap statusTyped repo = do
   (branches, d) <- branchPairs mmap statusTyped repo
 
-  let red    = "#ff0000"
-      orange = "#ffcc00"
-      yellow = "#ccff00"
-      green  = "#00ff00"
-      grey   = "#cccccc"
-      white  = "#ffffff"
-
-      wastebasket  = "&#x1f5d1;"
+  let wastebasket  = "&#x1f5d1;"
       cross_mark   = "&#x274c;"
       warning_sign = "&#x26a0;"
 
-      tc (Left (Git.Conflicts, Git.MConflicts)) = TableCell red "&nbsp;"
-      tc (Left (Git.Conflicts, Git.MClean))     = TableCell orange "&nbsp;"
-      tc (Left (Git.Clean, Git.MConflicts))     = TableCell orange "&nbsp;"
-      tc (Left (Git.Clean, Git.MClean))         = TableCell yellow "&nbsp;"
-
-      tc (Right Data.Ord.GT)  = TableCell grey "&nbsp;"
-      tc (Right Data.Ord.LT)  = TableCell green "&nbsp;"
-      tc (Right Data.Ord.EQ)  = TableCell white "&nbsp;"
+      tc x = TableCell (color x) "&nbsp;"
 
       table = Table (drop 7 . Git.branchName)
                     (take 3 . drop 7 . Git.branchName)
