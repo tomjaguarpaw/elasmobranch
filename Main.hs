@@ -119,9 +119,12 @@ tableKey = Table statusString
                    (map (\s -> ((s, ()), TableCell (color s) "&nbsp; "))
                         allOfThem))
   where allOfThem :: [CompareResult]
-        allOfThem = ((Left <$> ((,) <$> [minBound..maxBound]
-                                    <*> [minBound..maxBound]))
-                     ++ map Right [minBound..maxBound])
+        allOfThem = S.runIdentity $ S.toList_ $ do
+          S.for (S.each [minBound..maxBound]) $ \i ->
+            S.for (S.each [minBound..maxBound]) $ \j ->
+              S.yield (Left (i, j))
+          S.for (S.each [minBound..maxBound]) $ \i ->
+            S.yield (Right i)
 
 statusString :: CompareResult
              -> String
