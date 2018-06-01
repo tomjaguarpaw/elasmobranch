@@ -24,6 +24,8 @@ data TableCell = TableCell { tcColor  :: String
                            , tcString :: String
                            }
 
+emptyTableCell x = TableCell (color x) "&nbsp;"
+
 tableToHtml :: Monad m
             => Table String TableCell
             -> S.Stream (S.Of String) m ()
@@ -118,7 +120,7 @@ tableKey = Table statusString
                  allOfThem
                  [()]
                  (Data.Map.fromList
-                   (map (\s -> ((s, ()), TableCell (color s) "&nbsp; "))
+                   (map (\s -> ((s, ()), emptyTableCell s))
                         allOfThem))
   where allOfThem :: [CompareResult]
         allOfThem = S.runIdentity $ S.toList_ $ do
@@ -184,14 +186,13 @@ produceTable :: ([Git.Branch],
                  Data.Map.Map (Git.Branch, Git.Branch) CompareResult)
              -> IO (S.Stream (S.Of String) IO ())
 produceTable (branches, d) = do
-  let tc x = TableCell (color x) "&nbsp;"
-      master = Git.Branch "origin/master"
+  let master = Git.Branch "origin/master"
 
       table = Table (drop 7 . Git.branchName)
                     (take 3 . drop 7 . Git.branchName)
                     branchesWithMasterFirst
                     branchesWithMasterFirst
-                    (fmap tc d)
+                    (fmap emptyTableCell d)
         where branchesWithMasterFirst = master:branchesNotMaster
               branchesNotMaster = filter (/= master) branches
 
