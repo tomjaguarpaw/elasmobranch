@@ -156,7 +156,7 @@ originBranchHashes repo = do
         hash <- S.lift (Git.revParse repo branch)
         S.yield (branch, hash)
 
-  bhm_ S.:> _ <- S.toList branch_hashes
+  bhm_ <- S.toList_ branch_hashes
 
   return bhm_
 
