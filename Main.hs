@@ -333,13 +333,9 @@ mainLocal = do
   let repo = args !! 0
       outfile = args !! 1
 
-  branches <- Git.remoteBranches (Git.Repo repo)
+  let originBranchHashes_ _ = Git.originBranchHashes (Git.Repo repo)
 
-  -- This is a big hack
-  flip mapM_ branches $ \(Git.Branch branch) ->
-    Git.proc "git" ["checkout", drop 7 branch] (Just repo)
-
-  html <- doRepoMatrix Git.originBranchHashes (\r -> uncurry (Git.status r)) (\r -> print r >> System.IO.hFlush System.IO.stdout) repo
+  html <- doRepoMatrix originBranchHashes_ (\r -> uncurry (Git.status r)) (\r -> print r >> System.IO.hFlush System.IO.stdout) repo
 
   writeFile outfile html
 
