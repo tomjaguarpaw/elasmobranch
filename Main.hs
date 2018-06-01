@@ -126,13 +126,13 @@ key = Table statusString
 statusString :: Either (Git.RebaseStatus, Git.MergeStatus) Ordering
              -> String
 statusString = \case
-  (Left (Git.Conflicts, Git.MConflicts)) -> "Merge and rebase conflict"
-  (Left (Git.Conflicts, Git.MClean))     -> "Rebase conflict"
-  (Left (Git.Clean, Git.MConflicts))     -> "Merge conflict"
-  (Left (Git.Clean, Git.MClean))         -> "No conflict"
-  (Right Data.Ord.GT)  -> "Behind"
-  (Right Data.Ord.LT)  -> "Ahead of"
-  (Right Data.Ord.EQ)  -> "Equal to"
+  Left (Git.Conflicts, Git.MConflicts) -> "Merge and rebase conflict"
+  Left (Git.Conflicts, Git.MClean)     -> "Rebase conflict"
+  Left (Git.Clean, Git.MConflicts)     -> "Merge conflict"
+  Left (Git.Clean, Git.MClean)         -> "No conflict"
+  Right Data.Ord.GT  -> "Behind"
+  Right Data.Ord.LT  -> "Ahead of"
+  Right Data.Ord.EQ  -> "Equal to"
 
 color :: Either (Git.RebaseStatus, Git.MergeStatus) Ordering
       -> String
@@ -144,14 +144,14 @@ color = let
   grey   = "#cccccc"
   white  = "#ffffff"
   in \case
- (Left (Git.Conflicts, Git.MConflicts)) -> red
- (Left (Git.Conflicts, Git.MClean))     -> orange
- (Left (Git.Clean, Git.MConflicts))     -> orange
- (Left (Git.Clean, Git.MClean))         -> yellow
+ Left (Git.Conflicts, Git.MConflicts) -> red
+ Left (Git.Conflicts, Git.MClean)     -> orange
+ Left (Git.Clean, Git.MConflicts)     -> orange
+ Left (Git.Clean, Git.MClean)         -> yellow
 
- (Right Data.Ord.GT)  -> grey
- (Right Data.Ord.LT)  -> green
- (Right Data.Ord.EQ)  -> white
+ Right Data.Ord.GT  -> grey
+ Right Data.Ord.LT  -> green
+ Right Data.Ord.EQ  -> white
 
 produceTable :: ([Git.Branch],
                  Data.Map.Map
