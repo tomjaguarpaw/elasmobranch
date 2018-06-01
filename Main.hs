@@ -126,8 +126,7 @@ tableKey = Table statusString
           S.for (S.each [minBound..maxBound]) $ \i ->
             S.yield (Right i)
 
-statusString :: CompareResult
-             -> String
+statusString :: CompareResult -> String
 statusString = \case
   Left (Git.Conflicts, Git.MConflicts) -> "Merge and rebase conflict"
   Left (Git.Conflicts, Git.MClean)     -> "Rebase conflict"
@@ -156,8 +155,7 @@ color = let
  Right Data.Ord.LT  -> green
  Right Data.Ord.EQ  -> white
 
-warning :: CompareResult
-        -> Maybe (String, String -> String)
+warning :: CompareResult -> Maybe (String, String -> String)
 warning = let
   wastebasket  = "&#x1f5d1;"
   cross_mark   = "&#x274c;"
