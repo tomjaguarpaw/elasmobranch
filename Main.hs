@@ -170,24 +170,30 @@ color = simpleColorToHtml . \case
  Right Data.Ord.LT  -> Green
  Right Data.Ord.EQ  -> White
 
-warning :: CompareResult -> Maybe (String, String -> String)
-warning = let
-  wastebasket  = "&#x1f5d1;"
-  cross_mark   = "&#x274c;"
-  warning_sign = "&#x26a0;"
-  in \case
+data Sign = Wastebasket
+          | CrossMark
+          | WarningSign
+
+signToHtml :: Sign -> String
+signToHtml = \case
+  Wastebasket -> "&#x1f5d1;"
+  CrossMark   -> "&#x274c;"
+  WarningSign -> "&#x26a0;"
+
+warning :: CompareResult -> Maybe (Sign, String -> String)
+warning = \case
   Right Data.Ord.GT ->
-    Just (wastebasket, (++ " is behind master"))
+    Just (Wastebasket, (++ " is behind master"))
   Right Data.Ord.EQ -> Nothing
   Right Data.Ord.LT -> Nothing
   Left (Git.Conflicts, Git.MConflicts) ->
-    Just (cross_mark, (++ " conflicts with master"))
+    Just (CrossMark, (++ " conflicts with master"))
   Left (Git.Clean, Git.MConflicts) ->
-    Just (cross_mark, (++ " rebases cleanly on master but does not merge"))
+    Just (CrossMark, (++ " rebases cleanly on master but does not merge"))
   Left (Git.Conflicts, Git.MClean) ->
-    Just (cross_mark, (++ " merges cleanly into master but does not rebase"))
+    Just (CrossMark, (++ " merges cleanly into master but does not rebase"))
   Left (Git.Clean, Git.MClean) ->
-    Just (warning_sign,
+    Just (WarningSign,
           (++ " merges cleanly into and rebases cleanly onto master"))
 
 produceTable :: ([Git.Branch],
@@ -208,7 +214,8 @@ produceTable (branches, d) = do
         S.yield "<ul>"
         S.for (S.each branches) $ \branch ->
           let key = (branch, master)
-              li (sym, s) = "<li>" ++ sym ++ " &mdash; " ++ s ++ "</li>"
+              li (sym, s) = "<li>" ++ signToHtml sym
+                            ++ " &mdash; " ++ s ++ "</li>"
 
           in case Data.Map.lookup key d of
             Nothing -> error ("Couldn't find key " ++ show key ++ " in "
