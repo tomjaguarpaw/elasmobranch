@@ -193,7 +193,7 @@ produceTable (branches, d) = do
               master = Git.Branch "origin/master"
               branchesNotMaster = filter (/= master) branches
 
-      list = do
+      ulOfWarnings = do
         S.yield "<ul>"
         S.for (S.each branches) $ \branch ->
           let key = (branch, Git.Branch "origin/master")
@@ -211,7 +211,7 @@ produceTable (branches, d) = do
         S.yield "<head><title>elasmobranch</title></head>"
         S.yield "<body>"
         S.yield submitAnother
-        list
+        ulOfWarnings
         S.yield "<p>"
         tableToHtml table
         S.yield "</p>"
