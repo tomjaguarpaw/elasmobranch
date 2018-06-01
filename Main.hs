@@ -376,34 +376,34 @@ mainCommandLine = do
        Just (Git.RADRepoDirty repo) -> do
          wip <- Git.what'sInProgress repo
          putStrLn $ case wip of
-           Nothing         -> ("I guess you've got some normal changes. "
-                               ++ "I don't see anything wrong here "
-                               ++ "and I'm not trained to help you further.")
-           Just Git.IPRebase   -> ("You're in a rebase conflict. "
-                                   ++ "If you want to abort it do\n\n"
-                                   ++ "    git rebase --abort")
-           Just Git.IPMerge    -> ("You're in a merge conflict. "
-                                   ++ "If you want to abort it do\n\n"
-                                   ++ "    git merge --abort")
-           Just Git.IPStashPop -> ("In a stash pop conflict. "
-                                   ++ "If you want to abort it try\n\n"
-                                   ++ "    git reset --merge\n\n"
-                                   ++ "If that doesn't work then do\n\n"
-                                   ++ "    git reset HEAD\n\n"
-                                   ++ "and then to remove the popped changes "
-                                   ++ "from your working copy do\n\n"
-                                   ++ "    git checkout --patch\n\n"
-                                   ++ "(The popped changes still exist "
-                                   ++ "in the stash)\n\n"
-                                   ++ "If you have resolved the conflict "
-                                   ++ "and want to continue working without "
-                                   ++ "committing these changes then "
-                                   ++ "'git reset HEAD' is also the correct "
-                                   ++ "thing to do.")
-           Just Git.IPCherryPick -> ("You're in a cherry-pick conflict. "
-                                    ++ "If you want to abort it do\n\n"
-                                    ++ "    git cherry-pick --abort")
+           Nothing ->
+             "I guess you've got some normal changes. "
+             ++ "I don't see anything wrong here "
+             ++ "and I'm not trained to help you further."
+           Just ip -> inProgressMessage ip
+
     Left err -> putStrLn err
+
+inProgressMessage :: Git.InProgress -> String
+inProgressMessage = \case
+  Git.IPRebase   ->
+   "You're in a rebase conflict.  If you want to abort it do\n\n"
+    ++ "    git rebase --abort"
+  Git.IPMerge    ->
+   "You're in a merge conflict. If you want to abort it do\n\n"
+    ++ "    git merge --abort"
+  Git.IPStashPop ->
+    "In a stash pop conflict. If you want to abort it try\n\n"
+    ++ "    git reset --merge\n\nIf that doesn't work then do\n\n"
+    ++ "    git reset HEAD\n\nand then to remove the popped changes "
+    ++ "from your working copy do\n\n    git checkout --patch\n\n"
+    ++ "(The popped changes still exist in the stash)\n\n"
+    ++ "If you have resolved the conflict and want to continue working without "
+    ++ "committing these changes then 'git reset HEAD' is also the correct "
+    ++ "thing to do."
+  Git.IPCherryPick ->
+    "You're in a cherry-pick conflict. If you want to abort it do\n\n"
+    ++ "    git cherry-pick --abort"
 
 -- This is not at all thread safe
 memoize :: Ord t
