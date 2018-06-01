@@ -90,6 +90,30 @@ branchPairs checkit emitStatus repo = do
 
   return (branches, d)
 
+key :: Table String TableCell
+key = Table statusString
+            (const "Left to top")
+            allOfThem
+            [()]
+            (Data.Map.fromList
+              (map (\s -> ((s, ()), TableCell (color s) "&nbsp; "))
+                   allOfThem))
+  where allOfThem :: [Either (Git.RebaseStatus, Git.MergeStatus) Ordering]
+        allOfThem = ((Left <$> ((,) <$> [minBound..maxBound]
+                                    <*> [minBound..maxBound]))
+                     ++ map Right [minBound..maxBound])
+
+statusString :: Either (Git.RebaseStatus, Git.MergeStatus) Ordering
+             -> String
+statusString = \case
+  (Left (Git.Conflicts, Git.MConflicts)) -> "Merge and rebase conflict"
+  (Left (Git.Conflicts, Git.MClean))     -> "Rebase conflict"
+  (Left (Git.Clean, Git.MConflicts))     -> "Merge conflict"
+  (Left (Git.Clean, Git.MClean))         -> "No conflict"
+  (Right Data.Ord.GT)  -> "Behind"
+  (Right Data.Ord.LT)  -> "Ahead of"
+  (Right Data.Ord.EQ)  -> "Equal to"
+
 color :: Either (Git.RebaseStatus, Git.MergeStatus) Ordering
       -> String
 color = let
@@ -172,6 +196,9 @@ doRepoSuccess mmap statusTyped repo = do
         list
         S.yield "<p>"
         tableToHtml table
+        S.yield "</p>"
+        S.yield "<p>"
+        tableToHtml key
         S.yield "</p>"
         S.yield submitAnother
         S.yield "</body></html>"
