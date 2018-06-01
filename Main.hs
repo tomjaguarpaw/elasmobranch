@@ -257,9 +257,7 @@ doRepoMatrix :: _
 doRepoMatrix originBranchHashes mmap statusTyped path = do
     html <- doRepo originBranchHashes mmap statusTyped path
     l <- S.toList_ html
-    let htmlString = concat l
-
-    return htmlString
+    return (concat l)
 
 doRepoString :: CompareHashes'
              -> (Control.Concurrent.ThreadId -> Either Status String -> IO ())
