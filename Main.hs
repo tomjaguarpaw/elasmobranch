@@ -143,24 +143,33 @@ statusString = \case
   Right Data.Ord.LT  -> "Ahead of"
   Right Data.Ord.EQ  -> "Equal to"
 
+data SimpleColor = Red
+                 | Orange
+                 | Yellow
+                 | Green
+                 | Grey
+                 | White
+
+simpleColorToHtml :: SimpleColor -> String
+simpleColorToHtml = \case
+  Red    -> "#ff0000"
+  Orange -> "#ffcc00"
+  Yellow -> "#ccff00"
+  Green  -> "#00ff00"
+  Grey   -> "#cccccc"
+  White  -> "#ffffff"
+
 color :: CompareResult
       -> String
-color = let
-  red    = "#ff0000"
-  orange = "#ffcc00"
-  yellow = "#ccff00"
-  green  = "#00ff00"
-  grey   = "#cccccc"
-  white  = "#ffffff"
-  in \case
- Left (Git.Conflicts, Git.MConflicts) -> red
- Left (Git.Conflicts, Git.MClean)     -> orange
- Left (Git.Clean, Git.MConflicts)     -> orange
- Left (Git.Clean, Git.MClean)         -> yellow
+color = simpleColorToHtml . \case
+ Left (Git.Conflicts, Git.MConflicts) -> Red
+ Left (Git.Conflicts, Git.MClean)     -> Orange
+ Left (Git.Clean, Git.MConflicts)     -> Orange
+ Left (Git.Clean, Git.MClean)         -> Yellow
 
- Right Data.Ord.GT  -> grey
- Right Data.Ord.LT  -> green
- Right Data.Ord.EQ  -> white
+ Right Data.Ord.GT  -> Grey
+ Right Data.Ord.LT  -> Green
+ Right Data.Ord.EQ  -> White
 
 warning :: CompareResult -> Maybe (String, String -> String)
 warning = let
