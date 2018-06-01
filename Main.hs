@@ -110,14 +110,14 @@ branchPairs checkit emitStatus repo = do
   bhm_ <- Git.originBranchHashes repo
   branchPairsFromHashes checkit emitStatus repo bhm_
 
-key :: Table String TableCell
-key = Table statusString
-            (const "Left to top")
-            allOfThem
-            [()]
-            (Data.Map.fromList
-              (map (\s -> ((s, ()), TableCell (color s) "&nbsp; "))
-                   allOfThem))
+tableKey :: Table String TableCell
+tableKey = Table statusString
+                 (const "Left to top")
+                 allOfThem
+                 [()]
+                 (Data.Map.fromList
+                   (map (\s -> ((s, ()), TableCell (color s) "&nbsp; "))
+                        allOfThem))
   where allOfThem :: [Either (Git.RebaseStatus, Git.MergeStatus) Ordering]
         allOfThem = ((Left <$> ((,) <$> [minBound..maxBound]
                                     <*> [minBound..maxBound]))
@@ -216,7 +216,7 @@ produceTable (branches, d) = do
         tableToHtml table
         S.yield "</p>"
         S.yield "<p>"
-        tableToHtml key
+        tableToHtml tableKey
         S.yield "</p>"
         S.yield submitAnother
         S.yield "</body></html>"
