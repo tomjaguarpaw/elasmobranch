@@ -126,26 +126,31 @@ what'sInProgress (RepoDirty dir) = do
   rebaseApplyExists    <- doesGitPathExist "rebase-apply"
   cherryPickHeadExists <- doesGitPathExist "CHERRY_PICK_HEAD"
 
-  canCheckoutHEAD    <- do
-    (exitCode, _, _) <- proc "git" ["checkout", "HEAD"] (Just dir)
-    case exitCode of
-      System.Exit.ExitSuccess   -> return True
-      System.Exit.ExitFailure 1 -> return False
-      System.Exit.ExitFailure a -> error ("Didn't expect git rev-parse "
-                                          ++ "--show-toplevel to return "
-                                          ++ show a)
+  let canCheckoutHEAD_ = do
+        (exitCode, _, _) <- proc "git" ["checkout", "HEAD"] (Just dir)
+        case exitCode of
+          System.Exit.ExitSuccess   -> return True
+          System.Exit.ExitFailure 1 -> return False
+          System.Exit.ExitFailure a -> error ("Didn't expect git rev-parse "
+                                              ++ "--show-toplevel to return "
+                                              ++ show a)
 
-
-
-  return $ case ((mergeHeadExists, mergeModeExists, mergeMsgExists),
+  case ((mergeHeadExists, mergeModeExists, mergeMsgExists),
                  rebaseApplyExists,
-                 cherryPickHeadExists,
-                 canCheckoutHEAD) of
-   ((True,  True,  True),  False, False, False) -> Just IPMerge
-   ((False, False, False), True,  False, False) -> Just IPRebase
-   ((False, False, False), False, False, False) -> Just IPStashPop
-   ((False, False, True),  False, True,  False) -> Just IPCherryPick
-   ((False, False, False), False, False, True) -> Nothing
+                 cherryPickHeadExists) of
+   ((True,  True,  True),  False, False) -> return (Just IPMerge)
+   ((False, False, False), True,  False) -> return (Just IPRebase)
+   ((False, False, True),  False, True)  -> return (Just IPCherryPick)
+   ((False, False, False), False, False) -> do
+       -- We mustn't try to checkout HEAD if we're in a merge or
+       -- rebase because if the merge or rebase has been completely
+       -- fixed up (but not yet committed) the in-progress fix up will
+       -- be destroyed.  Therefore we only try to checkout HEAD if
+       -- from the conflict markers we deduce that it's safe to do so.
+       canCheckoutHEAD <- canCheckoutHEAD_
+       return $ if canCheckoutHEAD
+                then Nothing
+                else Just IPStashPop
    unexpected -> error ("Unexpected combination of conflict markers: " ++ show unexpected)
 
 originBranchHashes :: Repo -> IO [(Branch, Hash)]
