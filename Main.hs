@@ -96,7 +96,7 @@ branchPairsFromHashes checkit emitStatus repo bhm_ = do
               return result
             S.yield ((branch1, branch2), result)
 
-  l S.:> _ <- S.toList branchpairs
+  l <- S.toList_ branchpairs
 
   let d = Data.Map.fromList l
 
@@ -251,7 +251,7 @@ doRepoMatrix :: CompareHashes'
              -> IO String
 doRepoMatrix mmap statusTyped path = do
     html <- doRepo mmap statusTyped path
-    l S.:> _ <- S.toList html
+    l <- S.toList_ html
     let htmlString = concat l
 
     return htmlString
