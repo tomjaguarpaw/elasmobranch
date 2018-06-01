@@ -171,14 +171,12 @@ warning = let
   Left (Git.Conflicts, Git.MConflicts) ->
     Just (cross_mark, (++ " conflicts with master"))
   Left (Git.Clean, Git.MConflicts) ->
-    Just (cross_mark, (++ " rebases cleanly on master"
-                       ++ " but does not merge"))
+    Just (cross_mark, (++ " rebases cleanly on master but does not merge"))
   Left (Git.Conflicts, Git.MClean) ->
-    Just (cross_mark, (++ " merges cleanly into master"
-                       ++ " but does not rebase"))
+    Just (cross_mark, (++ " merges cleanly into master but does not rebase"))
   Left (Git.Clean, Git.MClean) ->
-    Just (warning_sign, (++ " merges cleanly into"
-                         ++ " and rebases cleanly onto master"))
+    Just (warning_sign,
+          (++ " merges cleanly into and rebases cleanly onto master"))
 
 produceTable :: ([Git.Branch],
                  Data.Map.Map (Git.Branch, Git.Branch) CompareResult)
