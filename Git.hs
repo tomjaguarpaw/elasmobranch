@@ -252,7 +252,7 @@ isAncestorOf (Repo repo) (Hash potentialAncestor) (Hash potentialDescendant) = d
                                      , potentialDescendant
                                      ]
                                      (Just repo)
-    
+
   return $ case exitStatus of
     System.Exit.ExitSuccess   -> True
     System.Exit.ExitFailure 1 -> False

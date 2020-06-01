@@ -15,7 +15,7 @@ import qualified System.Environment
 import qualified System.IO
 import qualified Git
 import qualified Server
- 
+
 data Table a b = forall e f. (Show e, Show f, Ord e, Ord f)
                => Table (e -> a) (f -> a) [e] [f] (Data.Map.Map (e, f) b)
 
