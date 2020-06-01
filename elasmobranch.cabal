@@ -20,3 +20,11 @@ library
     temporary
 
   default-language:    Haskell2010
+
+executable elasmobranch-matrix
+  hs-source-dirs: executables/elasmobranch-matrix
+  main-is: Main.hs
+
+  build-depends:
+    base,
+    elasmobranch
