@@ -8,7 +8,6 @@ module Main (module Main) where
 import qualified Control.Concurrent
 import qualified Data.IORef
 import qualified Data.Ord
-import           Control.Monad.Trans.Resource (runResourceT)
 import qualified Data.Map
 import qualified Streaming as S
 import qualified Streaming.Prelude as S
