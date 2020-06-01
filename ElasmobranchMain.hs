@@ -3,7 +3,7 @@
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE LambdaCase                #-}
 
-module Main (module Main) where
+module ElasmobranchMain (module ElasmobranchMain) where
 
 import qualified Control.Concurrent
 import qualified Data.IORef

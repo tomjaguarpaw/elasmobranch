@@ -6,7 +6,7 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      .
-  exposed-modules:     Main,
+  exposed-modules:     ElasmobranchMain,
                        Server,
                        Git
   build-depends:
